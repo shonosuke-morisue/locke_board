@@ -19,10 +19,10 @@ export const CardDetail: React.FC<CardDetailProps> = ({ card, onClose }) => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
-  // カードタイトルと本文を分離
-  const lines = card.content.split('\n');
-  const title = lines[0] || '';
-  const body = lines.slice(1).join('\n');
+  // カード名称をタイトルに、content を本文として使用
+  // 能力カードで他人が開いた場合は name が空文字で送信される
+  const title = card.name || '能力カード';
+  const body = card.content !== card.name ? card.content : '';
 
   return (
     // オーバーレイ（外側クリックで閉じる）

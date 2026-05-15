@@ -107,7 +107,7 @@ export const AmbushSetup: React.FC<AmbushSetupProps> = ({
         <>
           <p style={styles.evilInstruction}>
             ボード上の2箇所を選んで待ち伏せを設定してください。
-            待ち伏せマスはlawプレイヤーには通常の伏せカードに見えます。
+            待ち伏せマスはgoodプレイヤーには通常の伏せカードに見えます。
           </p>
 
           <div style={styles.status}>
@@ -181,7 +181,7 @@ export const AmbushSetup: React.FC<AmbushSetupProps> = ({
           </div>
         </>
       ) : (
-        /* lawプレイヤーには待機メッセージを表示 */
+        /* goodプレイヤーには待機メッセージを表示 */
         <div style={styles.waitingSection}>
           <div style={styles.waitingIcon}>⚔️</div>
           <p style={styles.waitingMessage}>

@@ -16,26 +16,66 @@ const PLAYER_COLORS = [
   '#795548', // ブラウン
 ];
 
-// カードコンテンツのサンプル（10種類程度）
-const CARD_CONTENTS = [
-  'エネルギーカード\n強力なエネルギーを放出する。移動力+2。',
-  'バリアカード\n防御フィールドを展開する。ダメージを1回無効化。',
-  'テレパシーカード\n相手の思考を読む。次の相手行動を先読みできる。',
-  'ワープカード\n空間を歪めて瞬間移動する。任意のマスに移動。',
-  '念動力カード\n物体を念力で動かす。隣接するコマを1マス移動させる。',
-  'ヒーリングカード\n生命力を回復する。次のターン、追加行動が可能。',
-  '幻覚カード\n幻影を生み出す。相手の行動を1回無効化。',
-  'センサーカード\n周囲を索敵する。隣接する伏せカードの内容を確認。',
-  '爆発カード\n周囲に爆発を起こす。隣接マスのコマをすべて宇宙港へ。',
-  'シールドカード\n強固な盾を展開する。2ターン間、全攻撃を無効化。',
-  'スピードカード\n超高速で移動する。このターン、もう1回移動できる。',
-  'トラップカード\n罠を設置する。次に踏んだコマをその場に固定。',
+// カード定義（名称と枚数）
+// content は後で個別に設定予定。現時点では name と同じ値を使用する。
+const CARD_DEFINITIONS: Array<{ name: string; count: number }> = [
+  { name: '[能力]巡洋艦',                  count: 1 },
+  { name: '[能力]手下',                    count: 2 },
+  { name: '[能力]ＥＳＰジャマーLv3',      count: 1 },
+  { name: '[能力]ＥＳＰジャマーLv4',      count: 1 },
+  { name: '[能力]ＥＳＰジャマーLv5',      count: 1 },
+  { name: '[能力]ＥＳＰフィールドLv3',    count: 1 },
+  { name: '[能力]ＥＳＰフィールドLv4',    count: 1 },
+  { name: '[能力]ＥＳＰフィールドLv5',    count: 1 },
+  { name: '[能力]エネルギースーツ',        count: 1 },
+  { name: '[能力]個人用パワードスーツLv4', count: 1 },
+  { name: '[能力]個人用パワードスーツLv5', count: 1 },
+  { name: '[能力]ニケ',                    count: 1 },
+  { name: '[能力]亜空間フィールド',        count: 1 },
+  { name: '[能力]ＥＳＰコントローラー',   count: 1 },
+  { name: '[能力]エネルギー吸収ボールLv3', count: 1 },
+  { name: '[能力]エネルギー吸収ボールLv4', count: 1 },
+  { name: '[能力]エネルギー吸収ボールLv5', count: 1 },
+  { name: '[能力]クローン',                count: 3 },
+  { name: '[能力]ジオイド弾',              count: 1 },
+  { name: '[能力]変身',                    count: 1 },
+  { name: '[能力]ラフノールの鏡Lv5',      count: 1 },
+  { name: '[能力]ラフノールの鏡Lv6',      count: 1 },
+  { name: '[能力]ラフノールの鏡Lv7',      count: 1 },
+  { name: '開拓地',                        count: 2 },
+  { name: '歓楽街',                        count: 2 },
+  { name: '工業地域',                      count: 2 },
+  { name: '住宅街',                        count: 2 },
+  { name: 'スラム街',                      count: 2 },
+  { name: '宇宙港',                        count: 6 },
+  { name: '逮捕',                          count: 4 },
+  { name: '戦闘発生',                      count: 10 },
+  { name: 'トラップ',                      count: 3 },
+  { name: '情報入手',                      count: 13 },
+  { name: '自分の正体露顕',               count: 2 },
+  { name: '他人の正体判明',               count: 4 },
 ];
+
+// デッキを展開する（枚数分カードを生成してシャッフル、計78枚）
+function buildDeck(): Array<{ name: string; content: string }> {
+  const deck: Array<{ name: string; content: string }> = [];
+  for (const def of CARD_DEFINITIONS) {
+    for (let i = 0; i < def.count; i++) {
+      deck.push({ name: def.name, content: def.name });
+    }
+  }
+  // Fisher-Yates シャッフル
+  for (let i = deck.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [deck[i], deck[j]] = [deck[j], deck[i]];
+  }
+  return deck;
+}
 
 // 初期ボードを生成する（6行×7列）
 export function createInitialBoard(): Cell[][] {
-  // カードのシャッフル
-  const shuffledContents = [...CARD_CONTENTS].sort(() => Math.random() - 0.5);
+  // 78枚デッキをシャッフルして先頭36枚をボードに配置
+  const deck = buildDeck();
   let cardIndex = 0;
 
   const board: Cell[][] = [];
@@ -52,16 +92,17 @@ export function createInitialBoard(): Cell[][] {
           card: null,
         });
       } else {
-        // カードが配置されるマス
-        const content = shuffledContents[cardIndex % shuffledContents.length];
-        cardIndex++;
+        // デッキから1枚取り出してマスに配置
+        const { name, content } = deck[cardIndex++];
 
         const card: CardData = {
           id: `card-${row}-${col}`,
+          name,
           content,
           isFaceUp: false,
           isAmbush: false,
           ambushLabel: null,
+          openedBy: null,
         };
 
         rowCells.push({
@@ -180,19 +221,27 @@ export function createFilteredGameState(
   // socketId から対応するプレイヤーを検索（安定したidではなく現在のsocketIdで照合）
   const player = state.players.find((p) => p.socketId === socketId);
   const isEvil = player?.faction === 'evil';
+  const playerId = player?.id ?? null;
 
-  // ボードのフィルタリング：待ち伏せ情報はevilのみに送信
+  // ボードのフィルタリング：秘密情報を各プレイヤーの権限に応じて制限
   const filteredBoard = state.board.map((row) =>
     row.map((cell) => {
       if (!cell.card) return cell;
 
+      const card = cell.card;
+      const isAbilityCard = card.name.startsWith('[能力]');
+      // 能力カードの名称・詳細は開いた本人のみ閲覧可能
+      const canSeeAbilityContent = !isAbilityCard || card.openedBy === playerId;
+
       return {
         ...cell,
         card: {
-          ...cell.card,
-          // evilは常に待ち伏せ情報が見える、lawはカードがオープンされた時のみ表示
-          isAmbush: cell.card.isAmbush && (isEvil || cell.card.isFaceUp),
-          ambushLabel: (isEvil || cell.card.isFaceUp) ? cell.card.ambushLabel : null,
+          ...card,
+          name:    canSeeAbilityContent ? card.name    : '',
+          content: canSeeAbilityContent ? card.content : '',
+          // evilは常に待ち伏せ情報が見える、goodはカードがオープンされた時のみ表示
+          isAmbush: card.isAmbush && (isEvil || card.isFaceUp),
+          ambushLabel: (isEvil || card.isFaceUp) ? card.ambushLabel : null,
         },
       };
     })

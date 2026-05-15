@@ -249,9 +249,9 @@ export function setupSocketHandlers(
       // PLAYINGフェーズに移行
       state.phase = 'PLAYING';
 
-      // 全プレイヤーを宇宙港（列0）に配置（行を均等に割り当て）
-      const approvedPlayers = state.players.filter((p) => p.isApproved);
-      approvedPlayers.forEach((player, index) => {
+      // goodプレイヤーのみ宇宙港（列0）に配置（evilは配置しない）
+      const goodPlayers = state.players.filter((p) => p.isApproved && p.faction === 'good');
+      goodPlayers.forEach((player, index) => {
         player.position = { row: index % 6, col: 0 };
       });
 
@@ -302,6 +302,11 @@ export function setupSocketHandlers(
       }
 
       card.isFaceUp = !card.isFaceUp;
+      // 表に返した時に開いたプレイヤーを記録（初回のみ）
+      if (card.isFaceUp && card.openedBy === null) {
+        const flipPlayer = state.players.find((p) => p.socketId === socket.id);
+        card.openedBy = flipPlayer?.id ?? null;
+      }
       console.log(`カードフリップ: (${row}, ${col}) → ${card.isFaceUp ? '表' : '裏'}`);
       broadcastGameState(io, state);
     });

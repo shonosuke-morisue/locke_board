@@ -1,6 +1,6 @@
 // ゲームの型定義（サーバー側）
 
-export type Faction = 'law' | 'evil';
+export type Faction = 'good' | 'evil';
 export type GamePhase = 'LOBBY' | 'FACTION_SETUP' | 'AMBUSH_SETUP' | 'PLAYING';
 
 // プレイヤー情報
@@ -19,10 +19,12 @@ export interface Player {
 // カードデータ（サーバー内部用・isAmbushを実際に保持）
 export interface CardData {
   id: string;
-  content: string;        // カードの詳細テキスト
+  name: string;            // カード名称
+  content: string;         // カードの詳細テキスト
   isFaceUp: boolean;
-  isAmbush: boolean;      // 実際の待ち伏せフラグ（サーバー内部管理用）
+  isAmbush: boolean;       // 実際の待ち伏せフラグ（サーバー内部管理用）
   ambushLabel: 'A' | 'B' | null; // 待ち伏せの識別ラベル
+  openedBy: string | null; // カードを開いたプレイヤーのID（能力カードの秘密情報管理用）
 }
 
 // マス情報

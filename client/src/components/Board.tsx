@@ -136,10 +136,10 @@ export const Board: React.FC<BoardProps> = ({
             <span
               style={{
                 ...styles.factionBadge,
-                ...(myself.faction === 'law' ? styles.lawBadge : styles.evilBadge),
+                ...(myself.faction === 'good' ? styles.lawBadge : styles.evilBadge),
               }}
             >
-              {myself.faction === 'law' ? '秩序（Law）' : '混沌（Evil）'}
+              {myself.faction === 'good' ? '秩序（Good）' : '混沌（Evil）'}
             </span>
           )}
           {/* ホスト専用ボタン */}
@@ -182,9 +182,9 @@ export const Board: React.FC<BoardProps> = ({
               {player.faction && (
                 <span style={{
                   ...styles.factionLabel,
-                  color: player.faction === 'law' ? '#6ea8fe' : '#fe6e6e',
+                  color: player.faction === 'good' ? '#6ea8fe' : '#fe6e6e',
                 }}>
-                  {player.faction === 'law' ? 'Law' : 'Evil'}
+                  {player.faction === 'good' ? 'Good' : 'Evil'}
                 </span>
               )}
             </div>

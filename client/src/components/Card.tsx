@@ -39,8 +39,8 @@ export const Card: React.FC<CardProps> = ({
     }
   };
 
-  // カードのタイトル（最初の行）を取得
-  const cardTitle = card.content.split('\n')[0] || 'カード';
+  // カード名称を表示タイトルとして使用（能力カードで他人が開いた場合は隠す）
+  const cardTitle = card.name || '能力カード';
 
   if (!card.isFaceUp) {
     // 伏せ状態のカード

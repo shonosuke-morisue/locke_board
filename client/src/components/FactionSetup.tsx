@@ -1,5 +1,5 @@
 // 陣営割り当て画面コンポーネント
-// ホストが各プレイヤーに law または evil の陣営を割り当てる
+// ホストが各プレイヤーに good または evil の陣営を割り当てる
 
 import React from 'react';
 import { GameState, Player, Faction } from '../types/game';
@@ -25,7 +25,7 @@ export const FactionSetup: React.FC<FactionSetupProps> = ({
   const allAssigned = approvedPlayers.every((p) => p.faction);
 
   // 陣営ごとの人数
-  const lawCount = approvedPlayers.filter((p) => p.faction === 'law').length;
+  const lawCount = approvedPlayers.filter((p) => p.faction === 'good').length;
   const evilCount = approvedPlayers.filter((p) => p.faction === 'evil').length;
 
   return (
@@ -38,7 +38,7 @@ export const FactionSetup: React.FC<FactionSetupProps> = ({
       {/* 陣営カウント */}
       <div style={styles.factionCount}>
         <div style={styles.lawCount}>
-          <span style={styles.factionLabel}>秩序（Law）</span>
+          <span style={styles.factionLabel}>秩序（Good）</span>
           <span style={styles.count}>{lawCount}人</span>
         </div>
         <div style={styles.evilCount}>
@@ -74,14 +74,14 @@ export const FactionSetup: React.FC<FactionSetupProps> = ({
             {isHost ? (
               <div style={styles.factionButtons}>
                 <button
-                  onClick={() => onAssignFaction(player.id, 'law')}
+                  onClick={() => onAssignFaction(player.id, 'good')}
                   style={{
                     ...styles.factionButton,
                     ...styles.lawButton,
-                    ...(player.faction === 'law' ? styles.activeLawButton : {}),
+                    ...(player.faction === 'good' ? styles.activeLawButton : {}),
                   }}
                 >
-                  秩序（Law）
+                  秩序（Good）
                 </button>
                 <button
                   onClick={() => onAssignFaction(player.id, 'evil')}
@@ -102,12 +102,12 @@ export const FactionSetup: React.FC<FactionSetupProps> = ({
                     <span
                       style={{
                         ...styles.factionBadge,
-                        ...(player.faction === 'law'
+                        ...(player.faction === 'good'
                           ? styles.lawBadge
                           : styles.evilBadge),
                       }}
                     >
-                      {player.faction === 'law' ? '秩序（Law）' : '混沌（Evil）'}
+                      {player.faction === 'good' ? '秩序（Good）' : '混沌（Evil）'}
                     </span>
                   ) : (
                     <span style={styles.unassigned}>未割り当て</span>

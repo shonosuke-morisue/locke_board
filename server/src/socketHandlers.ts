@@ -183,9 +183,9 @@ export function setupSocketHandlers(
         return;
       }
 
-      // 2箇所指定のバリデーション
-      if (!positions || positions.length !== 2) {
-        socket.emit('error', { message: '待ち伏せは2箇所指定してください。' });
+      // 0〜2箇所のバリデーション（クリックごとに中間状態も送信される）
+      if (!positions || positions.length > 2) {
+        socket.emit('error', { message: '待ち伏せは最大2箇所です。' });
         return;
       }
 
@@ -198,12 +198,14 @@ export function setupSocketHandlers(
       }
 
       // 重複チェック
-      if (positions[0].row === positions[1].row && positions[0].col === positions[1].col) {
+      if (positions.length === 2 &&
+          positions[0].row === positions[1].row &&
+          positions[0].col === positions[1].col) {
         socket.emit('error', { message: '異なる2箇所を選択してください。' });
         return;
       }
 
-      // 待ち伏せフラグをリセット
+      // 待ち伏せフラグをすべてリセットしてから再設定
       state.board.forEach((row) => {
         row.forEach((cell) => {
           if (cell.card) {

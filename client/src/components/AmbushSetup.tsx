@@ -1,7 +1,7 @@
 // 待ち伏せ設定画面コンポーネント
 // evilプレイヤーがボード上の2箇所を待ち伏せに設定する
 
-import React, { useState } from 'react';
+import React from 'react';
 import { GameState } from '../types/game';
 
 // 各行の地名（行インデックス順）
@@ -21,62 +21,40 @@ export const AmbushSetup: React.FC<AmbushSetupProps> = ({
   const myself = gameState.players.find((p) => p.id === gameState.myId);
   const isEvil = myself?.faction === 'evil';
 
-  // ローカルで選択中の待ち伏せ位置（確定前）
-  const [selectedPositions, setSelectedPositions] = useState<
-    Array<{ row: number; col: number }>
-  >([]);
-
-  // 現在サーバーで設定済みの待ち伏せ位置
-  // isAmbush=trueのカードがある位置をevilプレイヤーには表示
-  const confirmedAmbushPositions: Array<{ row: number; col: number }> = [];
+  // サーバー状態のみを正とする（ローカル状態は持たない）
+  // クリックのたびに即サーバーへ送信し、全evilプレイヤーにリアルタイム同期する
+  const ambushPositions: Array<{ row: number; col: number }> = [];
   if (isEvil) {
     gameState.board.forEach((row) => {
       row.forEach((cell) => {
         if (cell.card?.isAmbush) {
-          confirmedAmbushPositions.push({ row: cell.row, col: cell.col });
+          ambushPositions.push({ row: cell.row, col: cell.col });
         }
       });
     });
   }
 
-  // マスをクリックしたときの処理
+  // マスをクリックしたときの処理（即サーバーへ送信）
   const handleCellClick = (row: number, col: number) => {
-    if (!isEvil || col === 0) return; // evilのみ・宇宙港マス除外
+    if (!isEvil || col === 0) return;
 
-    const pos = { row, col };
-    const existingIndex = selectedPositions.findIndex(
+    const isAlreadySelected = ambushPositions.some(
       (p) => p.row === row && p.col === col
     );
 
-    if (existingIndex !== -1) {
-      // すでに選択中 → 選択解除
-      setSelectedPositions((prev) => prev.filter((_, i) => i !== existingIndex));
-    } else if (selectedPositions.length < 2) {
-      // 2箇所まで選択可能
-      const newPositions = [...selectedPositions, pos];
-      setSelectedPositions(newPositions);
-      if (newPositions.length === 2) {
-        // 2箇所選択されたらサーバーに送信
-        onSetAmbush(newPositions);
-      }
+    if (isAlreadySelected) {
+      // 選択解除：該当マスを除いたリストを送信
+      onSetAmbush(ambushPositions.filter((p) => !(p.row === row && p.col === col)));
+    } else if (ambushPositions.length < 2) {
+      // 追加：現在のリストに新しいマスを加えて送信
+      onSetAmbush([...ambushPositions, { row, col }]);
     }
+    // 2箇所選択済みで別のマスをクリックしても無視
   };
 
-  // 選択をリセットする
+  // 選択をリセットする（空リストを送信）
   const handleReset = () => {
-    setSelectedPositions([]);
-    onSetAmbush([{ row: -1, col: -1 }, { row: -1, col: -1 }]); // サーバー側もリセット
-  };
-
-  // マスの待ち伏せラベルを取得する（A/B、なければnull）
-  const getAmbushLabel = (row: number, col: number, cellAmbushLabel: 'A' | 'B' | null): 'A' | 'B' | null => {
-    // サーバー確定済みのラベルを優先
-    if (cellAmbushLabel) return cellAmbushLabel;
-    // ローカル選択中のラベル（選択順でA/B）
-    const localIndex = selectedPositions.findIndex((p) => p.row === row && p.col === col);
-    if (localIndex === 0) return 'A';
-    if (localIndex === 1) return 'B';
-    return null;
+    onSetAmbush([]);
   };
 
   // マスのスタイルを取得する
@@ -85,14 +63,11 @@ export const AmbushSetup: React.FC<AmbushSetupProps> = ({
       return { ...styles.cell, ...styles.spaceportCell };
     }
 
-    const isSelected = selectedPositions.some(
-      (p) => p.row === row && p.col === col
-    );
-    const isConfirmed = confirmedAmbushPositions.some(
+    const isSelected = ambushPositions.some(
       (p) => p.row === row && p.col === col
     );
 
-    if (isSelected || isConfirmed) {
+    if (isSelected) {
       return { ...styles.cell, ...styles.ambushCell };
     }
 
@@ -114,10 +89,7 @@ export const AmbushSetup: React.FC<AmbushSetupProps> = ({
             <span>
               選択中:{' '}
               <strong style={{ color: '#e74c3c' }}>
-                {confirmedAmbushPositions.length > 0
-                  ? confirmedAmbushPositions.length
-                  : selectedPositions.length}
-                / 2箇所
+                {ambushPositions.length} / 2箇所
               </strong>
             </span>
           </div>
@@ -141,9 +113,9 @@ export const AmbushSetup: React.FC<AmbushSetupProps> = ({
                         </span>
                         <span style={styles.cardBack}>■</span>
                         {/* 待ち伏せマスにA/Bラベルを表示 */}
-                        {getAmbushLabel(cell.row, cell.col, cell.card?.ambushLabel ?? null) && (
+                        {cell.card?.ambushLabel && (
                           <span style={styles.ambushMark}>
-                            待{getAmbushLabel(cell.row, cell.col, cell.card?.ambushLabel ?? null)}
+                            待{cell.card.ambushLabel}
                           </span>
                         )}
                       </>
@@ -159,19 +131,16 @@ export const AmbushSetup: React.FC<AmbushSetupProps> = ({
             <button
               onClick={handleReset}
               style={styles.resetButton}
-              disabled={
-                selectedPositions.length === 0 &&
-                confirmedAmbushPositions.length === 0
-              }
+              disabled={ambushPositions.length === 0}
             >
               リセット
             </button>
             <button
               onClick={onAmbushDone}
-              disabled={confirmedAmbushPositions.length !== 2}
+              disabled={ambushPositions.length !== 2}
               style={{
                 ...styles.doneButton,
-                ...(confirmedAmbushPositions.length !== 2
+                ...(ambushPositions.length !== 2
                   ? styles.doneButtonDisabled
                   : {}),
               }}

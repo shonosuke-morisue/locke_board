@@ -5,7 +5,7 @@
     "node": ">=18"
   },
   "scripts": {
-    "build": "cd client && npm install && ./node_modules/.bin/vite build && cd ../server && npm install && npm run build",
+    "build": "cd client && npm install --include=dev && npx vite build && cd ../server && npm install --include=dev && npm run build",
     "start": "NODE_ENV=production node server/dist/index.js"
   }
 }

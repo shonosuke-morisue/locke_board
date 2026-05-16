@@ -266,8 +266,9 @@ export function setupSocketHandlers(
         return;
       }
 
-      // 位置のバリデーション
-      if (row < 0 || row >= 6 || col < 0 || col >= 7) {
+      // 位置のバリデーション（除外ゾーン { row: -1, col: -1 } は特別に許可）
+      const isEliminatedZone = row === -1 && col === -1;
+      if (!isEliminatedZone && (row < 0 || row >= 6 || col < 0 || col >= 7)) {
         socket.emit('error', { message: '無効なマス位置です。' });
         return;
       }

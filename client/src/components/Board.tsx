@@ -38,6 +38,9 @@ export const Board: React.FC<BoardProps> = ({
   // ドラッグオーバー中のマス
   const [dragOverCell, setDragOverCell] = useState<{ row: number; col: number } | null>(null);
 
+  // 除外ゾーンのドラッグオーバー状態
+  const [dragOverEliminated, setDragOverEliminated] = useState(false);
+
   // ドラッグ開始
   const handleDragStart = useCallback(
     (e: React.DragEvent, playerId: string) => {
@@ -103,6 +106,11 @@ export const Board: React.FC<BoardProps> = ({
       );
     },
     [gameState.players]
+  );
+
+  // 除外ゾーンにいるプレイヤーを取得
+  const eliminatedPlayers = gameState.players.filter(
+    (p) => p.isApproved && p.position?.row === -1 && p.position?.col === -1
   );
 
   // マスのスタイルを取得
@@ -252,6 +260,41 @@ export const Board: React.FC<BoardProps> = ({
             })}
           </div>
         ))}
+      </div>
+
+      {/* 除外ゾーン */}
+      <div
+        style={{
+          ...styles.eliminatedZone,
+          ...(dragOverEliminated ? styles.dragOverCell : {}),
+        }}
+        onDragOver={(e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+          setDragOverEliminated(true);
+        }}
+        onDragLeave={() => setDragOverEliminated(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          const playerId = e.dataTransfer.getData('playerId') || draggingPlayerId;
+          if (playerId) {
+            onMovePiece(playerId, -1, -1);
+          }
+          setDraggingPlayerId(null);
+          setDragOverEliminated(false);
+        }}
+      >
+        <span style={styles.eliminatedLabel}>除外ゾーン</span>
+        <div style={styles.eliminatedPieces}>
+          {eliminatedPlayers.map((player) => (
+            <PlayerPiece
+              key={player.id}
+              player={player}
+              isMyPiece={player.id === gameState.myId}
+              onDragStart={handleDragStart}
+            />
+          ))}
+        </div>
       </div>
 
       {/* 操作説明 */}
@@ -435,5 +478,27 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: '12px',
     color: '#555',
     padding: '8px',
+  },
+  eliminatedZone: {
+    backgroundColor: '#1a0d0d',
+    border: '2px dashed #5a2a2a',
+    borderRadius: '8px',
+    padding: '12px 16px',
+    marginBottom: '16px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    minHeight: '60px',
+  },
+  eliminatedLabel: {
+    fontSize: '13px',
+    color: '#8a4a4a',
+    fontWeight: 'bold',
+    flexShrink: 0,
+  },
+  eliminatedPieces: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '4px',
   },
 };

@@ -57,6 +57,7 @@ export interface ServerGameState {
 export interface ClientToServerEvents {
   // playerId はクライアント側で生成・保存する安定したUUID
   'player:join': (data: { name: string; playerId: string }) => void;
+  'player:leave': () => void;
   'player:approve': (data: { playerId: string }) => void;
   'faction:assign': (data: { playerId: string; faction: Faction }) => void;
   'faction:done': () => void;

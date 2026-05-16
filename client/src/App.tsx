@@ -14,6 +14,7 @@ const App: React.FC = () => {
     isConnected,
     errorMessage,
     joinGame,
+    leaveGame,
     approvePlayer,
     assignFaction,
     factionDone,
@@ -65,6 +66,7 @@ const App: React.FC = () => {
             <Lobby
               gameState={gameState}
               onJoin={joinGame}
+              onLeave={leaveGame}
               onApprove={approvePlayer}
               onStartFactionSetup={factionDone}
             />

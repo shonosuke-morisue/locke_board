@@ -137,8 +137,10 @@ export function addPlayer(
   playerId: string
 ): Player {
   const isHost = state.players.length === 0;
-  // 接続中のプレイヤー数から色インデックスを決める
-  const colorIndex = state.players.length % PLAYER_COLORS.length;
+  // 既存プレイヤーが使っていない色を先頭から選ぶ
+  const usedColors = new Set(state.players.map((p) => p.color));
+  const color =
+    PLAYER_COLORS.find((c) => !usedColors.has(c)) ?? PLAYER_COLORS[0];
 
   const player: Player = {
     id: playerId,      // 安定したUUID
@@ -147,7 +149,7 @@ export function addPlayer(
     faction: undefined,
     isHost,
     isApproved: isHost, // ホストは自動承認
-    color: PLAYER_COLORS[colorIndex],
+    color,
     position: null,
     isConnected: true,
   };
@@ -180,6 +182,30 @@ export function disconnectPlayer(state: ServerGameState, socketId: string): void
       state.players.forEach((p) => { p.isHost = false; });
       nextHost.isHost = true;
     }
+  }
+}
+
+// プレイヤーが自発的に退出する（リストから削除し、ホストなら移譲する）
+export function leaveGame(state: ServerGameState, socketId: string): void {
+  const index = state.players.findIndex((p) => p.socketId === socketId);
+  if (index === -1) return;
+
+  const leavingPlayer = state.players[index];
+  const wasHost = leavingPlayer.isHost;
+
+  // プレイヤーをリストから削除
+  state.players.splice(index, 1);
+
+  // ホストが退出した場合、接続中の次のプレイヤー（承認済み優先）にホスト権を移譲
+  if (wasHost && state.players.length > 0) {
+    state.players.forEach((p) => { p.isHost = false; });
+    const nextHost =
+      state.players.find((p) => p.isConnected && p.isApproved) ??
+      state.players.find((p) => p.isConnected) ??
+      state.players[0];
+    nextHost.isHost = true;
+    // 新しいホストは自動承認
+    nextHost.isApproved = true;
   }
 }
 

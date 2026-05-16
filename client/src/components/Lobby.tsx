@@ -21,6 +21,7 @@ function getSavedName(): string {
 interface LobbyProps {
   gameState: GameState;
   onJoin: (name: string) => void;
+  onLeave: () => void;
   onApprove: (playerId: string) => void;
   onStartFactionSetup: () => void;
 }
@@ -28,6 +29,7 @@ interface LobbyProps {
 export const Lobby: React.FC<LobbyProps> = ({
   gameState,
   onJoin,
+  onLeave,
   onApprove,
   onStartFactionSetup,
 }) => {
@@ -88,12 +90,24 @@ export const Lobby: React.FC<LobbyProps> = ({
         <div style={styles.waitingBox}>
           <p>参加申請中... ホストの承認をお待ちください。</p>
           <p style={styles.playerName}>{myself?.name}</p>
+          <button onClick={onLeave} style={styles.cancelButton}>
+            参加をキャンセル
+          </button>
         </div>
       )}
 
-      {hasJoined && myself?.isApproved && (
+      {hasJoined && myself?.isApproved && !isHost && (
         <div style={styles.approvedBox}>
           <p>✓ 承認されました！ゲーム開始を待っています...</p>
+          <button onClick={onLeave} style={styles.cancelButton}>
+            参加をキャンセル
+          </button>
+        </div>
+      )}
+
+      {hasJoined && myself?.isApproved && isHost && (
+        <div style={styles.approvedBox}>
+          <p>✓ あなたはホストです</p>
         </div>
       )}
 
@@ -153,7 +167,7 @@ export const Lobby: React.FC<LobbyProps> = ({
         )}
       </div>
 
-      {/* ホスト向け: ゲーム開始ボタン */}
+      {/* ホスト向け: ゲーム開始ボタン・キャンセルボタン */}
       {isHost && (
         <div style={styles.startSection}>
           <button
@@ -171,6 +185,21 @@ export const Lobby: React.FC<LobbyProps> = ({
               ※ 2人以上の承認済みプレイヤーが必要です
             </p>
           )}
+          <button
+            onClick={() => {
+              const otherPlayers = gameState.players.filter(
+                (p) => p.id !== gameState.myId
+              );
+              const msg =
+                otherPlayers.length > 0
+                  ? `退出するとホストが他のプレイヤーに移譲されます。退出しますか？`
+                  : '退出しますか？';
+              if (window.confirm(msg)) onLeave();
+            }}
+            style={styles.hostCancelButton}
+          >
+            退出する
+          </button>
         </div>
       )}
     </div>
@@ -297,6 +326,10 @@ const styles: { [key: string]: React.CSSProperties } = {
   startSection: {
     textAlign: 'center',
     marginTop: '16px',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '12px',
   },
   startButton: {
     backgroundColor: '#e74c3c',
@@ -312,6 +345,23 @@ const styles: { [key: string]: React.CSSProperties } = {
     marginTop: '12px',
     color: '#666',
     fontSize: '13px',
+  },
+  cancelButton: {
+    marginTop: '12px',
+    backgroundColor: 'transparent',
+    color: '#888',
+    fontSize: '13px',
+    padding: '6px 16px',
+    borderRadius: '6px',
+    border: '1px solid #555',
+  },
+  hostCancelButton: {
+    backgroundColor: 'transparent',
+    color: '#888',
+    fontSize: '13px',
+    padding: '6px 16px',
+    borderRadius: '6px',
+    border: '1px solid #555',
   },
   emptyText: {
     color: '#555',

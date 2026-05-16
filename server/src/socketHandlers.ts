@@ -10,6 +10,7 @@ import {
   addPlayer,
   reconnectPlayer,
   disconnectPlayer,
+  leaveGame,
   getEvilPlayerIds,
   restartGame,
   endGame,
@@ -74,6 +75,21 @@ export function setupSocketHandlers(
 
       addPlayer(state, socket.id, name.trim(), playerId);
       console.log(`プレイヤー新規参加: ${name} (playerId: ${playerId})`);
+      broadcastGameState(io, state);
+    });
+
+    // プレイヤー退出（LOBBYフェーズのみ）
+    socket.on('player:leave', () => {
+      if (state.phase !== 'LOBBY') {
+        socket.emit('error', { message: 'ゲーム開始後は退出できません。' });
+        return;
+      }
+
+      const player = state.players.find((p) => p.socketId === socket.id);
+      if (!player) return;
+
+      console.log(`プレイヤー退出: ${player.name}`);
+      leaveGame(state, socket.id);
       broadcastGameState(io, state);
     });
 

@@ -35,6 +35,7 @@ interface ServerToClientEvents {
 
 interface ClientToServerEvents {
   'player:join': (data: { name: string; playerId: string }) => void;
+  'player:leave': () => void;
   'player:approve': (data: { playerId: string }) => void;
   'faction:assign': (data: { playerId: string; faction: Faction }) => void;
   'faction:done': () => void;
@@ -52,6 +53,7 @@ interface UseSocketReturn {
   errorMessage: string | null;
   // イベント送信関数
   joinGame: (name: string) => void;
+  leaveGame: () => void;
   approvePlayer: (playerId: string) => void;
   assignFaction: (playerId: string, faction: Faction) => void;
   factionDone: () => void;
@@ -140,6 +142,13 @@ export function useSocket(): UseSocketReturn {
     socketRef.current?.emit('player:join', { name, playerId });
   }, []);
 
+  // 自発的な退出（LOBBYフェーズのみ）
+  const leaveGame = useCallback(() => {
+    socketRef.current?.emit('player:leave');
+    // localStorageを削除して再参加を新規扱いにする
+    localStorage.removeItem('locke_board_player');
+  }, []);
+
   // プレイヤー承認（ホストのみ）
   const approvePlayer = useCallback((playerId: string) => {
     socketRef.current?.emit('player:approve', { playerId });
@@ -195,6 +204,7 @@ export function useSocket(): UseSocketReturn {
     isConnected,
     errorMessage,
     joinGame,
+    leaveGame,
     approvePlayer,
     assignFaction,
     factionDone,

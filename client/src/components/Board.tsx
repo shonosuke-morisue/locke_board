@@ -221,7 +221,7 @@ export const Board: React.FC<BoardProps> = ({
     <div style={styles.container}>
       {/* ヘッダー */}
       <div style={styles.header}>
-        <h2 style={styles.title}>ゲームボード</h2>
+        <h2 style={styles.title}>第1部「惑星編」</h2>
         <div style={styles.headerRight}>
           {/* 自分の陣営表示 */}
           {myself?.faction && (

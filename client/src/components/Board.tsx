@@ -7,7 +7,6 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 const PLANET_NAMES = ['地球', 'ロンウォール', 'セレン', 'トア', 'ディナール', 'マイア'];
 import { GameState, Cell, CardData } from '../types/game';
 import { Card } from './Card';
-import { CardDetail } from './CardDetail';
 import { PlayerPiece } from './PlayerPiece';
 
 interface BoardProps {
@@ -166,11 +165,9 @@ export const Board: React.FC<BoardProps> = ({
     [onFlipCard]
   );
 
-  // カードの長押し（詳細表示）
-  const handleCardLongPress = useCallback((card: CardData) => {
-    if (card.isFaceUp) {
-      setDetailCard(card);
-    }
+  // カードのクリック（詳細表示）
+  const handleCardSelect = useCallback((card: CardData) => {
+    setDetailCard(card);
   }, []);
 
   // このマスにいるプレイヤーを取得
@@ -277,6 +274,9 @@ export const Board: React.FC<BoardProps> = ({
           ))}
       </div>
 
+      {/* ボードエリア（グリッド + カード詳細パネル） */}
+      <div style={styles.boardArea}>
+
       {/* ボードグリッド */}
       <div style={styles.board}>
         {/* ボード行 */}
@@ -317,7 +317,7 @@ export const Board: React.FC<BoardProps> = ({
                         onDoubleClick={() =>
                           handleCardDoubleClick(cell.row, cell.col)
                         }
-                        onLongPress={() => handleCardLongPress(cell.card!)}
+                        onSelect={() => handleCardSelect(cell.card!)}
                       />
                     </div>
                   )}
@@ -342,6 +342,44 @@ export const Board: React.FC<BoardProps> = ({
           </div>
         ))}
       </div>
+
+      {/* カード詳細パネル（グリッド右側） */}
+      <div style={styles.detailPanel}>
+        {detailCard ? (
+          <>
+            <div style={{
+              ...styles.detailTitle,
+              ...(detailCard.isAmbush ? styles.detailTitleAmbush : {}),
+            }}>
+              {detailCard.isAmbush ? '⚠ 待ち伏せ！' : (detailCard.name || '能力カード')}
+            </div>
+            <div style={styles.detailBody}>
+              {detailCard.isAmbush ? (
+                <p style={styles.detailAmbushText}>
+                  このマスには待ち伏せが仕掛けられていた！
+                </p>
+              ) : detailCard.content ? (
+                <p style={styles.detailText}>{detailCard.content}</p>
+              ) : (
+                <p style={styles.detailEmpty}>テキストなし</p>
+              )}
+            </div>
+            <div style={styles.detailId}>ID: {detailCard.id}</div>
+            <button
+              style={styles.detailCloseButton}
+              onClick={() => setDetailCard(null)}
+            >
+              閉じる
+            </button>
+          </>
+        ) : (
+          <p style={styles.detailPlaceholder}>
+            表向きカードをクリックすると詳細が表示されます
+          </p>
+        )}
+      </div>
+
+      </div>{/* boardArea 終了 */}
 
       {/* 除外ゾーン */}
       <div
@@ -381,16 +419,9 @@ export const Board: React.FC<BoardProps> = ({
 
       {/* 操作説明 */}
       <div style={styles.instructions}>
-        <p>コマ: ドラッグ&ドロップで移動 | カード: ダブルクリックで表裏切替 | 表カード: 長押しで詳細表示</p>
+        <p>コマ: ドラッグ&ドロップで移動 | 表カード: クリックで詳細表示 / ダブルクリックで裏返す | 裏カード: ダブルクリックで開く</p>
       </div>
 
-      {/* カード詳細ポップアップ */}
-      {detailCard && (
-        <CardDetail
-          card={detailCard}
-          onClose={() => setDetailCard(null)}
-        />
-      )}
     </div>
   );
 };
@@ -480,12 +511,86 @@ const styles: { [key: string]: React.CSSProperties } = {
   factionLabel: {
     fontSize: '11px',
   },
+  boardArea: {
+    display: 'flex',
+    gap: '12px',
+    alignItems: 'flex-start',
+    marginBottom: '16px',
+  },
   board: {
+    flex: '1 1 0',
+    minWidth: 0,
     backgroundColor: '#0d1a2e',
     border: '2px solid #2a3a5a',
     borderRadius: '8px',
     overflow: 'hidden',
-    marginBottom: '16px',
+  },
+  detailPanel: {
+    width: '200px',
+    flexShrink: 0,
+    backgroundColor: '#111827',
+    border: '1px solid #2a3a5a',
+    borderRadius: '8px',
+    padding: '16px',
+    minHeight: '200px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '10px',
+  },
+  detailTitle: {
+    fontSize: '14px',
+    fontWeight: 'bold',
+    color: '#aac4ff',
+    lineHeight: 1.4,
+    borderBottom: '1px solid #2a3a5a',
+    paddingBottom: '8px',
+  },
+  detailTitleAmbush: {
+    color: '#e74c3c',
+  },
+  detailBody: {
+    flex: 1,
+    backgroundColor: '#0d1a2e',
+    borderRadius: '6px',
+    padding: '10px',
+  },
+  detailText: {
+    fontSize: '13px',
+    color: '#ccc',
+    lineHeight: 1.7,
+    whiteSpace: 'pre-wrap' as const,
+    margin: 0,
+  },
+  detailAmbushText: {
+    fontSize: '13px',
+    color: '#e74c3c',
+    lineHeight: 1.7,
+    margin: 0,
+  },
+  detailEmpty: {
+    fontSize: '12px',
+    color: '#555',
+    fontStyle: 'italic' as const,
+    margin: 0,
+  },
+  detailId: {
+    fontSize: '10px',
+    color: '#3a3a3a',
+  },
+  detailCloseButton: {
+    backgroundColor: '#2a3a5a',
+    color: '#aaa',
+    fontSize: '12px',
+    padding: '6px',
+    borderRadius: '4px',
+    width: '100%',
+  },
+  detailPlaceholder: {
+    fontSize: '12px',
+    color: '#444',
+    textAlign: 'center' as const,
+    lineHeight: 1.6,
+    margin: 0,
   },
   boardRow: {
     display: 'flex',

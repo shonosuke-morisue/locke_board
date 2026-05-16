@@ -4,8 +4,6 @@
 import React, { useRef } from 'react';
 import { CardData } from '../types/game';
 
-// 長押し判定の閾値（ミリ秒）
-const LONG_PRESS_DURATION = 600;
 // ダブルタップ判定の閾値（ミリ秒）
 const DOUBLE_TAP_DURATION = 300;
 // タッチ移動キャンセル閾値（px）
@@ -15,19 +13,15 @@ interface CardProps {
   card: CardData;
   isEvil: boolean;
   onDoubleClick: () => void;
-  onLongPress: () => void;
+  onSelect: () => void; // 表カードをクリック/シングルタップで詳細表示
 }
 
 export const Card: React.FC<CardProps> = ({
   card,
   isEvil,
   onDoubleClick,
-  onLongPress,
+  onSelect,
 }) => {
-  // 長押しタイマーのref
-  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // 長押しが発火したかどうか（タッチ終了時のダブルタップ判定に使用）
-  const longPressTriggered = useRef(false);
   // タッチ開始位置（移動キャンセル判定用）
   const touchStartPos = useRef<{ x: number; y: number } | null>(null);
   // 最後にタップした時刻（ダブルタップ判定用）
@@ -36,91 +30,67 @@ export const Card: React.FC<CardProps> = ({
   // （iOS が後続で発火する dblclick イベントを無視するためのフラグ）
   const touchFlippedRef = useRef(false);
 
-  // 長押し開始（マウス）
-  const handleMouseDown = () => {
-    longPressTimer.current = setTimeout(() => {
-      onLongPress();
-      longPressTimer.current = null;
-    }, LONG_PRESS_DURATION);
-  };
-
-  // 長押しキャンセル（マウス）
-  const cancelLongPress = () => {
-    if (longPressTimer.current !== null) {
-      clearTimeout(longPressTimer.current);
-      longPressTimer.current = null;
-    }
-  };
-
-  // タッチ開始（長押し + ダブルタップ対応）
-  const handleTouchStart = (e: React.TouchEvent) => {
-    longPressTriggered.current = false;
-    const touch = e.touches[0];
-    touchStartPos.current = { x: touch.clientX, y: touch.clientY };
-    longPressTimer.current = setTimeout(() => {
-      longPressTriggered.current = true;
-      onLongPress();
-      longPressTimer.current = null;
-    }, LONG_PRESS_DURATION);
-  };
-
-  // タッチ移動（大きく動いたら長押しキャンセル）
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!touchStartPos.current) return;
-    const touch = e.touches[0];
-    const dx = Math.abs(touch.clientX - touchStartPos.current.x);
-    const dy = Math.abs(touch.clientY - touchStartPos.current.y);
-    if (dx > TOUCH_MOVE_THRESHOLD || dy > TOUCH_MOVE_THRESHOLD) {
-      cancelLongPress();
-    }
-  };
-
-  // タッチ終了（ダブルタップ検出）
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    e.preventDefault();
-    cancelLongPress();
-    touchStartPos.current = null;
-    // 長押しが発火した場合はダブルタップ判定しない
-    if (longPressTriggered.current) return;
-    const now = Date.now();
-    if (now - lastTapTime.current < DOUBLE_TAP_DURATION) {
-      // タッチフリップフラグを立て、iOS が後続発火する dblclick を無視させる
-      touchFlippedRef.current = true;
-      setTimeout(() => { touchFlippedRef.current = false; }, 500);
-      onDoubleClick();
-      lastTapTime.current = 0;
-    } else {
-      lastTapTime.current = now;
-    }
-  };
-
   // dblclick ハンドラ（タッチによるフリップ直後は無視する）
   const handleDoubleClick = () => {
     if (touchFlippedRef.current) return;
     onDoubleClick();
   };
 
-  // カード名称を表示タイトルとして使用（能力カードで他人が開いた場合は隠す）
+  // タッチ開始（開始位置を記録）
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    touchStartPos.current = { x: touch.clientX, y: touch.clientY };
+  };
+
+  // タッチ終了（シングルタップ / ダブルタップ判定）
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    e.preventDefault();
+    if (!touchStartPos.current) return;
+
+    // 終了位置との差分でタップか移動かを判定
+    const touch = e.changedTouches[0];
+    const dx = Math.abs(touch.clientX - touchStartPos.current.x);
+    const dy = Math.abs(touch.clientY - touchStartPos.current.y);
+    touchStartPos.current = null;
+
+    // 大きく動いた場合はタップ扱いしない（スクロール等）
+    if (dx > TOUCH_MOVE_THRESHOLD || dy > TOUCH_MOVE_THRESHOLD) return;
+
+    const now = Date.now();
+    if (now - lastTapTime.current < DOUBLE_TAP_DURATION) {
+      // ダブルタップ → フリップ
+      touchFlippedRef.current = true;
+      setTimeout(() => { touchFlippedRef.current = false; }, 500);
+      onDoubleClick();
+      lastTapTime.current = 0;
+    } else {
+      lastTapTime.current = now;
+      // シングルタップ: 表カードなら詳細表示
+      if (card.isFaceUp) {
+        onSelect();
+      }
+      // 裏カードはダブルタップのみフリップ
+    }
+  };
+
+  // カード名称（能力カードで他人が開いた場合は隠す）
   const cardTitle = card.name || '能力カード';
 
   if (!card.isFaceUp) {
-    // 伏せ状態のカード（ダブルクリック or ダブルタップで開く）
+    // 伏せ状態のカード（ダブルクリック / ダブルタップでめくる）
     return (
       <div
         style={{
           ...styles.card,
           ...styles.faceDown,
-          // evilには待ち伏せマスを視覚的に識別できるよう表示
           ...(isEvil && card.isAmbush ? styles.ambushHint : {}),
         }}
         onDoubleClick={handleDoubleClick}
         onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         title="ダブルクリックでカードを開く"
       >
         <span style={styles.cardBackSymbol}>■</span>
-        {/* evilプレイヤーには待ち伏せマークを表示 */}
         {isEvil && card.isAmbush && (
           <span style={styles.ambushBadge}>待{card.ambushLabel}</span>
         )}
@@ -128,7 +98,7 @@ export const Card: React.FC<CardProps> = ({
     );
   }
 
-  // 表状態のカード（長押しで詳細表示、ダブルクリックで裏返す）
+  // 表状態のカード（クリックで詳細表示、ダブルクリックで裏返す）
   return (
     <div
       style={{
@@ -136,23 +106,18 @@ export const Card: React.FC<CardProps> = ({
         ...styles.faceUp,
         ...(card.isAmbush ? styles.ambushFaceUp : {}),
       }}
+      onClick={onSelect}
       onDoubleClick={handleDoubleClick}
-      onMouseDown={handleMouseDown}
-      onMouseUp={cancelLongPress}
-      onMouseLeave={cancelLongPress}
       onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
-      title="長押しで詳細表示 / ダブルクリックで裏返す"
+      title="クリックで詳細表示 / ダブルクリックで裏返す"
     >
       {card.isAmbush ? (
-        // 待ち伏せカード：「待ち伏せA」「待ち伏せB」として表示
         <div style={styles.ambushContent}>
           <span style={styles.ambushIcon}>⚠</span>
           <span style={styles.ambushText}>待ち伏せ{card.ambushLabel}</span>
         </div>
       ) : (
-        // 通常カード
         <div style={styles.cardContent}>
           <span style={styles.cardTitle}>{cardTitle}</span>
         </div>
@@ -179,7 +144,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     backgroundColor: '#2a2a4a',
     border: '2px solid #444',
   },
-  // evilにのみ見える待ち伏せのヒント（背景色で識別）
   ambushHint: {
     backgroundColor: '#3a1a1a',
     border: '2px solid #8a3a3a',
@@ -188,7 +152,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     backgroundColor: '#2a3a5a',
     border: '2px solid #4a6a9a',
   },
-  // 待ち伏せカードが表になった時のスタイル
   ambushFaceUp: {
     backgroundColor: '#5a1a1a',
     border: '2px solid #e74c3c',

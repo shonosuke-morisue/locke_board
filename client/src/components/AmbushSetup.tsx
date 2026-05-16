@@ -105,13 +105,12 @@ export const AmbushSetup: React.FC<AmbushSetupProps> = ({
                     onClick={() => handleCellClick(cell.row, cell.col)}
                   >
                     {cell.isSpaceport ? (
-                      <span style={styles.spaceportLabel}>宇宙港</span>
+                      <span style={styles.spaceportLabel}>{PLANET_NAMES[cell.row]}宇宙港</span>
                     ) : (
                       <>
                         <span style={styles.cellLabel}>
                           {PLANET_NAMES[cell.row]}{cell.col}
                         </span>
-                        <span style={styles.cardBack}>■</span>
                         {/* 待ち伏せマスにA/Bラベルを表示 */}
                         {cell.card?.ambushLabel && (
                           <span style={styles.ambushMark}>
@@ -204,7 +203,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   cell: {
     width: 'calc(100% / 7)',
-    aspectRatio: '1',
+    height: '50px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -214,7 +213,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     transition: 'background-color 0.2s',
     flexShrink: 0,
     flexGrow: 1,
-    minHeight: '75px',
   },
   spaceportCell: {
     backgroundColor: '#0d1a2e',

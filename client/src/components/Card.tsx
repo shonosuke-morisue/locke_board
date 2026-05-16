@@ -91,7 +91,7 @@ export const Card: React.FC<CardProps> = ({
         onTouchEnd={handleTouchEnd}
         title="ダブルクリックでカードを開く"
       >
-        <span style={styles.cardBackSymbol}>■</span>
+        <span style={styles.cardBackSymbol}>PLANET<br />CARD</span>
         {isEvil && card.isAmbush && (
           <span style={styles.ambushBadge}>待{card.ambushLabel}</span>
         )}
@@ -165,8 +165,12 @@ const styles: { [key: string]: React.CSSProperties } = {
     border: '2px solid #2ecc71',
   },
   cardBackSymbol: {
-    fontSize: '20px',
-    color: '#444',
+    fontSize: '9px',
+    color: '#555',
+    textAlign: 'center',
+    lineHeight: 1.5,
+    fontWeight: 'bold',
+    letterSpacing: '0.05em',
   },
   ambushBadge: {
     position: 'absolute',

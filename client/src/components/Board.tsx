@@ -5,7 +5,7 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 
 // 各行の地名（行インデックス順）
 const PLANET_NAMES = ['地球', 'ロンウォール', 'セレン', 'トア', 'ディナール', 'マイア'];
-import { GameState, Cell, CardData } from '../types/game';
+import { GameState, Cell } from '../types/game';
 import { Card } from './Card';
 import { PlayerPiece } from './PlayerPiece';
 
@@ -28,8 +28,12 @@ export const Board: React.FC<BoardProps> = ({
   const isHost = myself?.isHost ?? false;
   const isEvil = myself?.faction === 'evil';
 
-  // 詳細表示中のカード
-  const [detailCard, setDetailCard] = useState<CardData | null>(null);
+  // 詳細表示中のマス座標（座標で管理することでフリップ後も最新状態を反映）
+  const [detailPos, setDetailPos] = useState<{ row: number; col: number } | null>(null);
+  // 詳細表示中の実際のカード（gameStateから導出）
+  const detailCard = detailPos
+    ? (gameState.board[detailPos.row]?.[detailPos.col]?.card ?? null)
+    : null;
 
   // ドラッグ中のプレイヤーID（マウス）
   const [draggingPlayerId, setDraggingPlayerId] = useState<string | null>(null);
@@ -158,16 +162,21 @@ export const Board: React.FC<BoardProps> = ({
   );
 
   // カードのダブルクリック（フリップ）
+  // 裏カードをフリップした場合は詳細パネルも表示する
   const handleCardDoubleClick = useCallback(
     (row: number, col: number) => {
+      const card = gameState.board[row]?.[col]?.card;
+      if (card && !card.isFaceUp) {
+        setDetailPos({ row, col });
+      }
       onFlipCard(row, col);
     },
-    [onFlipCard]
+    [onFlipCard, gameState.board]
   );
 
   // カードのクリック（詳細表示）
-  const handleCardSelect = useCallback((card: CardData) => {
-    setDetailCard(card);
+  const handleCardSelect = useCallback((row: number, col: number) => {
+    setDetailPos({ row, col });
   }, []);
 
   // このマスにいるプレイヤーを取得
@@ -317,7 +326,7 @@ export const Board: React.FC<BoardProps> = ({
                         onDoubleClick={() =>
                           handleCardDoubleClick(cell.row, cell.col)
                         }
-                        onSelect={() => handleCardSelect(cell.card!)}
+                        onSelect={() => handleCardSelect(cell.row, cell.col)}
                       />
                     </div>
                   )}
@@ -367,7 +376,7 @@ export const Board: React.FC<BoardProps> = ({
             <div style={styles.detailId}>ID: {detailCard.id}</div>
             <button
               style={styles.detailCloseButton}
-              onClick={() => setDetailCard(null)}
+              onClick={() => setDetailPos(null)}
             >
               閉じる
             </button>

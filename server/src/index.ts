@@ -4,6 +4,7 @@ import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
+import path from 'path';
 import { ClientToServerEvents, ServerToClientEvents } from './types';
 import { createInitialGameState } from './gameState';
 import { setupSocketHandlers } from './socketHandlers';
@@ -41,6 +42,16 @@ app.get('/health', (_req, res) => {
 
 // Socket.ioハンドラーの設定
 setupSocketHandlers(io, gameState);
+
+// 本番環境ではクライアントのビルド済みファイルを配信する
+// （server/dist/index.js から見て ../../client/dist）
+if (process.env.NODE_ENV === 'production') {
+  const clientDist = path.join(__dirname, '../../client/dist');
+  app.use(express.static(clientDist));
+  app.get('*', (_req, res) => {
+    res.sendFile(path.join(clientDist, 'index.html'));
+  });
+}
 
 // サーバー起動
 httpServer.listen(PORT, () => {

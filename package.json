@@ -1,0 +1,11 @@
+{
+  "name": "locke-board",
+  "version": "0.1.0",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "npm --prefix client install && npm --prefix client run build && npm --prefix server install && npm --prefix server run build",
+    "start": "NODE_ENV=production node server/dist/index.js"
+  }
+}

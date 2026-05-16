@@ -73,11 +73,12 @@ export function useSocket(): UseSocketReturn {
 
   useEffect(() => {
     // Socket.ioクライアントの初期化
-    // window.location.hostnameを使うことで、localhost・LAN接続いずれでも
-    // 正しいサーバーアドレス（ポート3001）に直接接続する
-    const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io(
-      `http://${window.location.hostname}:3001`
-    );
+    // 本番環境: フロントとバックが同一サーバーのため同じオリジンに接続
+    // 開発環境: Viteは5173、サーバーは3001で別ポートのため直接指定
+    const serverUrl = import.meta.env.PROD
+      ? window.location.origin
+      : `http://${window.location.hostname}:3001`;
+    const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io(serverUrl);
 
     socketRef.current = socket;
 

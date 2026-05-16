@@ -1,7 +1,7 @@
 // ゲームボードコンポーネント
 // 6行×7列のグリッド、ドラッグ&ドロップによるコマ移動、カードのフリップを担当
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 
 // 各行の地名（行インデックス順）
 const PLANET_NAMES = ['地球', 'ロンウォール', 'セレン', 'トア', 'ディナール', 'マイア'];
@@ -32,14 +32,20 @@ export const Board: React.FC<BoardProps> = ({
   // 詳細表示中のカード
   const [detailCard, setDetailCard] = useState<CardData | null>(null);
 
-  // ドラッグ中のプレイヤーID
+  // ドラッグ中のプレイヤーID（マウス）
   const [draggingPlayerId, setDraggingPlayerId] = useState<string | null>(null);
 
-  // ドラッグオーバー中のマス
+  // ドラッグオーバー中のマス（マウス・タッチ共通）
   const [dragOverCell, setDragOverCell] = useState<{ row: number; col: number } | null>(null);
 
-  // 除外ゾーンのドラッグオーバー状態
+  // 除外ゾーンのドラッグオーバー状態（マウス・タッチ共通）
   const [dragOverEliminated, setDragOverEliminated] = useState(false);
+
+  // タッチドラッグ中のプレイヤーID
+  const [touchDraggingPlayerId, setTouchDraggingPlayerId] = useState<string | null>(null);
+  // touchend で最新の drop target を参照するための ref
+  const touchDropCellRef = useRef<{ row: number; col: number } | null>(null);
+  const touchDropEliminatedRef = useRef(false);
 
   // ドラッグ開始
   const handleDragStart = useCallback(
@@ -65,6 +71,78 @@ export const Board: React.FC<BoardProps> = ({
   const handleDragLeave = useCallback(() => {
     setDragOverCell(null);
   }, []);
+
+  // タッチドラッグ開始（PlayerPieceからコールバック）
+  const handleTouchDragStart = useCallback((playerId: string) => {
+    setTouchDraggingPlayerId(playerId);
+  }, []);
+
+  // タッチドラッグ中のドキュメントレベルイベントリスナー
+  // ※ スクロール防止のため passive: false で登録する
+  useEffect(() => {
+    if (!touchDraggingPlayerId) return;
+
+    const handleTouchMove = (e: TouchEvent) => {
+      e.preventDefault(); // スクロール防止
+      const touch = e.touches[0];
+      const el = document.elementFromPoint(touch.clientX, touch.clientY);
+      if (!el) {
+        setDragOverCell(null);
+        setDragOverEliminated(false);
+        touchDropCellRef.current = null;
+        touchDropEliminatedRef.current = false;
+        return;
+      }
+      // data-row, data-col 属性を持つ要素（またはその祖先）を探す
+      const cellEl = (el as Element).closest('[data-row]') as HTMLElement | null;
+      if (cellEl?.dataset.row !== undefined && cellEl?.dataset.col !== undefined) {
+        const row = parseInt(cellEl.dataset.row, 10);
+        const col = parseInt(cellEl.dataset.col, 10);
+        if (!isNaN(row) && !isNaN(col)) {
+          setDragOverCell({ row, col });
+          setDragOverEliminated(false);
+          touchDropCellRef.current = { row, col };
+          touchDropEliminatedRef.current = false;
+          return;
+        }
+      }
+      // 除外ゾーンをチェック
+      if ((el as Element).closest('[data-eliminated]')) {
+        setDragOverEliminated(true);
+        setDragOverCell(null);
+        touchDropCellRef.current = null;
+        touchDropEliminatedRef.current = true;
+        return;
+      }
+      setDragOverCell(null);
+      setDragOverEliminated(false);
+      touchDropCellRef.current = null;
+      touchDropEliminatedRef.current = false;
+    };
+
+    const handleTouchEnd = () => {
+      const playerId = touchDraggingPlayerId;
+      if (playerId) {
+        if (touchDropCellRef.current) {
+          onMovePiece(playerId, touchDropCellRef.current.row, touchDropCellRef.current.col);
+        } else if (touchDropEliminatedRef.current) {
+          onMovePiece(playerId, -1, -1);
+        }
+      }
+      setTouchDraggingPlayerId(null);
+      setDragOverCell(null);
+      setDragOverEliminated(false);
+      touchDropCellRef.current = null;
+      touchDropEliminatedRef.current = false;
+    };
+
+    document.addEventListener('touchmove', handleTouchMove, { passive: false });
+    document.addEventListener('touchend', handleTouchEnd);
+    return () => {
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [touchDraggingPlayerId, onMovePiece]);
 
   // ドロップ（コマを移動）
   const handleDrop = useCallback(
@@ -209,6 +287,8 @@ export const Board: React.FC<BoardProps> = ({
               return (
                 <div
                   key={`${cell.row}-${cell.col}`}
+                  data-row={cell.row}
+                  data-col={cell.col}
                   style={getCellStyle(cell)}
                   onDragOver={(e) => handleDragOver(e, cell.row, cell.col)}
                   onDragLeave={handleDragLeave}
@@ -251,6 +331,7 @@ export const Board: React.FC<BoardProps> = ({
                           player={player}
                           isMyPiece={player.id === gameState.myId}
                           onDragStart={handleDragStart}
+                          onTouchDragStart={handleTouchDragStart}
                         />
                       ))}
                     </div>
@@ -264,6 +345,7 @@ export const Board: React.FC<BoardProps> = ({
 
       {/* 除外ゾーン */}
       <div
+        data-eliminated="true"
         style={{
           ...styles.eliminatedZone,
           ...(dragOverEliminated ? styles.dragOverCell : {}),

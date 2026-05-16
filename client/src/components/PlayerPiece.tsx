@@ -1,5 +1,5 @@
 // プレイヤーコマコンポーネント
-// HTML5 Drag and Drop APIを使用したコマ移動に対応
+// HTML5 Drag and Drop API（デスクトップ）とTouch Events API（タブレット・スマホ）に対応
 
 import React from 'react';
 import { Player } from '../types/game';
@@ -8,17 +8,21 @@ interface PlayerPieceProps {
   player: Player;
   isMyPiece: boolean;
   onDragStart: (e: React.DragEvent, playerId: string) => void;
+  // タッチドラッグ開始コールバック（iPad等のタッチデバイス用）
+  onTouchDragStart?: (playerId: string) => void;
 }
 
 export const PlayerPiece: React.FC<PlayerPieceProps> = ({
   player,
   isMyPiece,
   onDragStart,
+  onTouchDragStart,
 }) => {
   return (
     <div
       draggable
       onDragStart={(e) => onDragStart(e, player.id)}
+      onTouchStart={() => onTouchDragStart?.(player.id)}
       style={{
         ...styles.piece,
         backgroundColor: player.color,

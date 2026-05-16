@@ -6,6 +6,10 @@ import { CardData } from '../types/game';
 
 // 長押し判定の閾値（ミリ秒）
 const LONG_PRESS_DURATION = 600;
+// ダブルタップ判定の閾値（ミリ秒）
+const DOUBLE_TAP_DURATION = 300;
+// タッチ移動キャンセル閾値（px）
+const TOUCH_MOVE_THRESHOLD = 10;
 
 interface CardProps {
   card: CardData;
@@ -22,8 +26,14 @@ export const Card: React.FC<CardProps> = ({
 }) => {
   // 長押しタイマーのref
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // 長押しが発火したかどうか（タッチ終了時のダブルタップ判定に使用）
+  const longPressTriggered = useRef(false);
+  // タッチ開始位置（移動キャンセル判定用）
+  const touchStartPos = useRef<{ x: number; y: number } | null>(null);
+  // 最後にタップした時刻（ダブルタップ判定用）
+  const lastTapTime = useRef<number>(0);
 
-  // 長押し開始
+  // 長押し開始（マウス）
   const handleMouseDown = () => {
     longPressTimer.current = setTimeout(() => {
       onLongPress();
@@ -31,7 +41,7 @@ export const Card: React.FC<CardProps> = ({
     }, LONG_PRESS_DURATION);
   };
 
-  // 長押しキャンセル（離した・カーソルが外れた）
+  // 長押しキャンセル（マウス）
   const cancelLongPress = () => {
     if (longPressTimer.current !== null) {
       clearTimeout(longPressTimer.current);
@@ -39,11 +49,49 @@ export const Card: React.FC<CardProps> = ({
     }
   };
 
+  // タッチ開始（長押し + ダブルタップ対応）
+  const handleTouchStart = (e: React.TouchEvent) => {
+    longPressTriggered.current = false;
+    const touch = e.touches[0];
+    touchStartPos.current = { x: touch.clientX, y: touch.clientY };
+    longPressTimer.current = setTimeout(() => {
+      longPressTriggered.current = true;
+      onLongPress();
+      longPressTimer.current = null;
+    }, LONG_PRESS_DURATION);
+  };
+
+  // タッチ移動（大きく動いたら長押しキャンセル）
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!touchStartPos.current) return;
+    const touch = e.touches[0];
+    const dx = Math.abs(touch.clientX - touchStartPos.current.x);
+    const dy = Math.abs(touch.clientY - touchStartPos.current.y);
+    if (dx > TOUCH_MOVE_THRESHOLD || dy > TOUCH_MOVE_THRESHOLD) {
+      cancelLongPress();
+    }
+  };
+
+  // タッチ終了（ダブルタップ検出）
+  const handleTouchEnd = () => {
+    cancelLongPress();
+    touchStartPos.current = null;
+    // 長押しが発火した場合はダブルタップ判定しない
+    if (longPressTriggered.current) return;
+    const now = Date.now();
+    if (now - lastTapTime.current < DOUBLE_TAP_DURATION) {
+      onDoubleClick();
+      lastTapTime.current = 0;
+    } else {
+      lastTapTime.current = now;
+    }
+  };
+
   // カード名称を表示タイトルとして使用（能力カードで他人が開いた場合は隠す）
   const cardTitle = card.name || '能力カード';
 
   if (!card.isFaceUp) {
-    // 伏せ状態のカード
+    // 伏せ状態のカード（ダブルクリック or ダブルタップで開く）
     return (
       <div
         style={{
@@ -53,6 +101,9 @@ export const Card: React.FC<CardProps> = ({
           ...(isEvil && card.isAmbush ? styles.ambushHint : {}),
         }}
         onDoubleClick={onDoubleClick}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
         title="ダブルクリックでカードを開く"
       >
         <span style={styles.cardBackSymbol}>■</span>
@@ -76,6 +127,9 @@ export const Card: React.FC<CardProps> = ({
       onMouseDown={handleMouseDown}
       onMouseUp={cancelLongPress}
       onMouseLeave={cancelLongPress}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
       title="長押しで詳細表示 / ダブルクリックで裏返す"
     >
       {card.isAmbush ? (

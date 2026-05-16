@@ -73,9 +73,11 @@ export function useSocket(): UseSocketReturn {
 
   useEffect(() => {
     // Socket.ioクライアントの初期化
-    const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io({
-      // Viteのプロキシ設定により、開発時はlocalhost:3001に転送される
-    });
+    // window.location.hostnameを使うことで、localhost・LAN接続いずれでも
+    // 正しいサーバーアドレス（ポート3001）に直接接続する
+    const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io(
+      `http://${window.location.hostname}:3001`
+    );
 
     socketRef.current = socket;
 
@@ -116,11 +118,23 @@ export function useSocket(): UseSocketReturn {
     };
   }, []);
 
+  // HTTPSが使えない環境でも動作するUUID生成（crypto.randomUUID非対応時のフォールバック）
+  function generateUUID(): string {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      return crypto.randomUUID();
+    }
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+      const r = Math.random() * 16 | 0;
+      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  }
+
   // プレイヤー参加（初回）
   const joinGame = useCallback((name: string) => {
     // 既存のplayerIdがあれば再利用、なければ新規生成
     const stored = getStoredPlayer();
-    const playerId = stored?.playerId ?? crypto.randomUUID();
+    const playerId = stored?.playerId ?? generateUUID();
     savePlayer(name, playerId);
     socketRef.current?.emit('player:join', { name, playerId });
   }, []);

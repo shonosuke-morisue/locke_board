@@ -12,16 +12,16 @@ const PORT = process.env.PORT || 3001;
 
 // Expressアプリケーションの初期化
 const app = express();
-app.use(cors({ origin: 'http://localhost:5173', credentials: true }));
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 
 // HTTPサーバーの作成
 const httpServer = createServer(app);
 
-// Socket.ioサーバーの作成
+// Socket.ioサーバーの作成（ローカルネットワーク内の任意のオリジンを許可）
 const io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer, {
   cors: {
-    origin: 'http://localhost:5173',
+    origin: true,
     methods: ['GET', 'POST'],
     credentials: true,
   },

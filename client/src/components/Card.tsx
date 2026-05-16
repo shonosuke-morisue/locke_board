@@ -75,6 +75,7 @@ export const Card: React.FC<CardProps> = ({
 
   // カード名称（能力カードで他人が開いた場合は隠す）
   const cardTitle = card.name || '能力カード';
+  const isAbilityCard = card.name.startsWith('[能力]');
 
   if (!card.isFaceUp) {
     // 伏せ状態のカード（ダブルクリック / ダブルタップでめくる）
@@ -104,7 +105,7 @@ export const Card: React.FC<CardProps> = ({
       style={{
         ...styles.card,
         ...styles.faceUp,
-        ...(card.isAmbush ? styles.ambushFaceUp : {}),
+        ...(card.isAmbush ? styles.ambushFaceUp : isAbilityCard ? styles.abilityFaceUp : {}),
       }}
       onClick={onSelect}
       onDoubleClick={handleDoubleClick}
@@ -119,7 +120,10 @@ export const Card: React.FC<CardProps> = ({
         </div>
       ) : (
         <div style={styles.cardContent}>
-          <span style={styles.cardTitle}>{cardTitle}</span>
+          <span style={{
+            ...styles.cardTitle,
+            ...(!card.isAmbush && isAbilityCard ? styles.abilityCardTitle : {}),
+          }}>{cardTitle}</span>
         </div>
       )}
     </div>
@@ -156,6 +160,10 @@ const styles: { [key: string]: React.CSSProperties } = {
     backgroundColor: '#5a1a1a',
     border: '2px solid #e74c3c',
   },
+  abilityFaceUp: {
+    backgroundColor: '#1a3a1a',
+    border: '2px solid #2ecc71',
+  },
   cardBackSymbol: {
     fontSize: '20px',
     color: '#444',
@@ -177,6 +185,9 @@ const styles: { [key: string]: React.CSSProperties } = {
     color: '#aac4ff',
     lineHeight: 1.3,
     wordBreak: 'break-all',
+  },
+  abilityCardTitle: {
+    color: '#7defa7',
   },
   ambushContent: {
     display: 'flex',

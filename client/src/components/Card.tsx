@@ -32,6 +32,9 @@ export const Card: React.FC<CardProps> = ({
   const touchStartPos = useRef<{ x: number; y: number } | null>(null);
   // 最後にタップした時刻（ダブルタップ判定用）
   const lastTapTime = useRef<number>(0);
+  // タッチによるフリップが直前に発火したかどうか
+  // （iOS が後続で発火する dblclick イベントを無視するためのフラグ）
+  const touchFlippedRef = useRef(false);
 
   // 長押し開始（マウス）
   const handleMouseDown = () => {
@@ -74,20 +77,27 @@ export const Card: React.FC<CardProps> = ({
 
   // タッチ終了（ダブルタップ検出）
   const handleTouchEnd = (e: React.TouchEvent) => {
+    e.preventDefault();
     cancelLongPress();
     touchStartPos.current = null;
     // 長押しが発火した場合はダブルタップ判定しない
     if (longPressTriggered.current) return;
     const now = Date.now();
     if (now - lastTapTime.current < DOUBLE_TAP_DURATION) {
-      // ブラウザが続けて発火する dblclick イベントを抑制する
-      // （抑制しないと flip → flip back が連続して発生する）
-      e.preventDefault();
+      // タッチフリップフラグを立て、iOS が後続発火する dblclick を無視させる
+      touchFlippedRef.current = true;
+      setTimeout(() => { touchFlippedRef.current = false; }, 500);
       onDoubleClick();
       lastTapTime.current = 0;
     } else {
       lastTapTime.current = now;
     }
+  };
+
+  // dblclick ハンドラ（タッチによるフリップ直後は無視する）
+  const handleDoubleClick = () => {
+    if (touchFlippedRef.current) return;
+    onDoubleClick();
   };
 
   // カード名称を表示タイトルとして使用（能力カードで他人が開いた場合は隠す）
@@ -103,7 +113,7 @@ export const Card: React.FC<CardProps> = ({
           // evilには待ち伏せマスを視覚的に識別できるよう表示
           ...(isEvil && card.isAmbush ? styles.ambushHint : {}),
         }}
-        onDoubleClick={onDoubleClick}
+        onDoubleClick={handleDoubleClick}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
@@ -126,7 +136,7 @@ export const Card: React.FC<CardProps> = ({
         ...styles.faceUp,
         ...(card.isAmbush ? styles.ambushFaceUp : {}),
       }}
-      onDoubleClick={onDoubleClick}
+      onDoubleClick={handleDoubleClick}
       onMouseDown={handleMouseDown}
       onMouseUp={cancelLongPress}
       onMouseLeave={cancelLongPress}

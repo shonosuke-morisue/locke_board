@@ -16,44 +16,43 @@ const PLAYER_COLORS = [
   '#795548', // ブラウン
 ];
 
-// カード定義（名称と枚数）
-// content は後で個別に設定予定。現時点では name と同じ値を使用する。
-const CARD_DEFINITIONS: Array<{ name: string; count: number }> = [
-  { name: '[能力]巡洋艦',                  count: 1 },
-  { name: '[能力]手下',                    count: 2 },
-  { name: '[能力]ＥＳＰジャマーLv3',      count: 1 },
-  { name: '[能力]ＥＳＰジャマーLv4',      count: 1 },
-  { name: '[能力]ＥＳＰジャマーLv5',      count: 1 },
-  { name: '[能力]ＥＳＰフィールドLv3',    count: 1 },
-  { name: '[能力]ＥＳＰフィールドLv4',    count: 1 },
-  { name: '[能力]ＥＳＰフィールドLv5',    count: 1 },
-  { name: '[能力]エネルギースーツ',        count: 1 },
-  { name: '[能力]個人用パワードスーツLv4', count: 1 },
-  { name: '[能力]個人用パワードスーツLv5', count: 1 },
-  { name: '[能力]ニケ',                    count: 1 },
-  { name: '[能力]亜空間フィールド',        count: 1 },
-  { name: '[能力]ＥＳＰコントローラー',   count: 1 },
-  { name: '[能力]エネルギー吸収ボールLv3', count: 1 },
-  { name: '[能力]エネルギー吸収ボールLv4', count: 1 },
-  { name: '[能力]エネルギー吸収ボールLv5', count: 1 },
-  { name: '[能力]クローン',                count: 3 },
-  { name: '[能力]ジオイド弾',              count: 1 },
-  { name: '[能力]変身',                    count: 1 },
-  { name: '[能力]ラフノールの鏡Lv5',      count: 1 },
-  { name: '[能力]ラフノールの鏡Lv6',      count: 1 },
-  { name: '[能力]ラフノールの鏡Lv7',      count: 1 },
-  { name: '開拓地',                        count: 2 },
-  { name: '歓楽街',                        count: 2 },
-  { name: '工業地域',                      count: 2 },
-  { name: '住宅街',                        count: 2 },
-  { name: 'スラム街',                      count: 2 },
-  { name: '宇宙港',                        count: 6 },
-  { name: '逮捕',                          count: 4 },
-  { name: '戦闘発生',                      count: 10 },
-  { name: 'トラップ',                      count: 3 },
-  { name: '情報入手',                      count: 13 },
-  { name: '自分の正体露顕',               count: 2 },
-  { name: '他人の正体判明',               count: 4 },
+// カード定義（名称・枚数・詳細テキスト）
+const CARD_DEFINITIONS: Array<{ name: string; count: number; content: string }> = [
+  { name: '[能力]巡洋艦',                  count: 1,  content: '' },
+  { name: '[能力]手下',                    count: 2,  content: '' },
+  { name: '[能力]ＥＳＰジャマーLv3',      count: 1,  content: '' },
+  { name: '[能力]ＥＳＰジャマーLv4',      count: 1,  content: '' },
+  { name: '[能力]ＥＳＰジャマーLv5',      count: 1,  content: '' },
+  { name: '[能力]ＥＳＰフィールドLv3',    count: 1,  content: '' },
+  { name: '[能力]ＥＳＰフィールドLv4',    count: 1,  content: '' },
+  { name: '[能力]ＥＳＰフィールドLv5',    count: 1,  content: '' },
+  { name: '[能力]エネルギースーツ',        count: 1,  content: '' },
+  { name: '[能力]個人用パワードスーツLv4', count: 1,  content: '' },
+  { name: '[能力]個人用パワードスーツLv5', count: 1,  content: '' },
+  { name: '[能力]ニケ',                    count: 1,  content: '' },
+  { name: '[能力]亜空間フィールド',        count: 1,  content: '' },
+  { name: '[能力]ＥＳＰコントローラー',   count: 1,  content: '' },
+  { name: '[能力]エネルギー吸収ボールLv3', count: 1,  content: '' },
+  { name: '[能力]エネルギー吸収ボールLv4', count: 1,  content: '' },
+  { name: '[能力]エネルギー吸収ボールLv5', count: 1,  content: '' },
+  { name: '[能力]クローン',                count: 3,  content: '' },
+  { name: '[能力]ジオイド弾',              count: 1,  content: '' },
+  { name: '[能力]変身',                    count: 1,  content: '' },
+  { name: '[能力]ラフノールの鏡Lv5',      count: 1,  content: '' },
+  { name: '[能力]ラフノールの鏡Lv6',      count: 1,  content: '' },
+  { name: '[能力]ラフノールの鏡Lv7',      count: 1,  content: '' },
+  { name: '開拓地',                        count: 2,  content: '' },
+  { name: '歓楽街',                        count: 2,  content: '' },
+  { name: '工業地域',                      count: 2,  content: '' },
+  { name: '住宅街',                        count: 2,  content: '' },
+  { name: 'スラム街',                      count: 2,  content: '' },
+  { name: '宇宙港',                        count: 6,  content: '' },
+  { name: '逮捕',                          count: 4,  content: '' },
+  { name: '戦闘発生',                      count: 10, content: '' },
+  { name: 'トラップ',                      count: 3,  content: '' },
+  { name: '情報入手',                      count: 13, content: '' },
+  { name: '自分の正体露顕',               count: 2,  content: '' },
+  { name: '他人の正体判明',               count: 4,  content: '' },
 ];
 
 // デッキを展開する（枚数分カードを生成してシャッフル、計78枚）
@@ -61,7 +60,7 @@ function buildDeck(): Array<{ name: string; content: string }> {
   const deck: Array<{ name: string; content: string }> = [];
   for (const def of CARD_DEFINITIONS) {
     for (let i = 0; i < def.count; i++) {
-      deck.push({ name: def.name, content: def.name });
+      deck.push({ name: def.name, content: def.content });
     }
   }
   // Fisher-Yates シャッフル

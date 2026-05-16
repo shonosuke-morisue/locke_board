@@ -21,6 +21,7 @@ export interface CardData {
   id: string;
   name: string;            // カード名称
   content: string;         // カードの詳細テキスト
+  isAbility: boolean;      // 能力カードかどうか
   isFaceUp: boolean;
   isAmbush: boolean;       // 実際の待ち伏せフラグ（サーバー内部管理用）
   ambushLabel: 'A' | 'B' | null; // 待ち伏せの識別ラベル

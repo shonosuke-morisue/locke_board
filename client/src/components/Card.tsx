@@ -75,7 +75,7 @@ export const Card: React.FC<CardProps> = ({
 
   // カード名称（能力カードで他人が開いた場合は隠す）
   const cardTitle = card.name || '能力カード';
-  const isAbilityCard = card.name.startsWith('[能力]');
+  const isAbilityCard = card.isAbility;
 
   if (!card.isFaceUp) {
     // 伏せ状態のカード（ダブルクリック / ダブルタップでめくる）

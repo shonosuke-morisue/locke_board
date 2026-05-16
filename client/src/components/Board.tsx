@@ -367,7 +367,7 @@ export const Board: React.FC<BoardProps> = ({
                 <p style={styles.detailAmbushText}>
                   このマスには待ち伏せが仕掛けられていた！
                 </p>
-              ) : !detailCard.name ? (
+              ) : detailCard.isAbility && !detailCard.name ? (
                 // 他人が開いた能力カード（サーバーがname・contentを隠蔽）
                 <p style={styles.detailEmpty}>
                   他のプレイヤーが取得した能力カードです。内容は本人のみ確認できます。

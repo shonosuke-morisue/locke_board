@@ -73,13 +73,16 @@ export const Card: React.FC<CardProps> = ({
   };
 
   // タッチ終了（ダブルタップ検出）
-  const handleTouchEnd = () => {
+  const handleTouchEnd = (e: React.TouchEvent) => {
     cancelLongPress();
     touchStartPos.current = null;
     // 長押しが発火した場合はダブルタップ判定しない
     if (longPressTriggered.current) return;
     const now = Date.now();
     if (now - lastTapTime.current < DOUBLE_TAP_DURATION) {
+      // ブラウザが続けて発火する dblclick イベントを抑制する
+      // （抑制しないと flip → flip back が連続して発生する）
+      e.preventDefault();
       onDoubleClick();
       lastTapTime.current = 0;
     } else {

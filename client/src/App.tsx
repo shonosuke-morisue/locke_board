@@ -7,6 +7,8 @@ import { Lobby } from './components/Lobby';
 import { FactionSetup } from './components/FactionSetup';
 import { AmbushSetup } from './components/AmbushSetup';
 import { Board } from './components/Board';
+import { BaseSetup } from './components/BaseSetup';
+import { BaseBoard } from './components/BaseBoard';
 
 const App: React.FC = () => {
   const {
@@ -24,6 +26,12 @@ const App: React.FC = () => {
     flipCard,
     restartGame,
     endGame,
+    startBase,
+    setKeyPoint,
+    keyPointDone,
+    flipBaseCard,
+    destroyBaseCard,
+    restoreBaseCard,
     clearError,
   } = useSocket();
 
@@ -96,6 +104,29 @@ const App: React.FC = () => {
               gameState={gameState}
               onMovePiece={movePiece}
               onFlipCard={flipCard}
+              onRestart={restartGame}
+              onEnd={endGame}
+              onStartBase={startBase}
+            />
+          )}
+
+          {/* BASE_SETUPフェーズ */}
+          {gameState.phase === 'BASE_SETUP' && (
+            <BaseSetup
+              gameState={gameState}
+              onSetKeyPoint={setKeyPoint}
+              onKeyPointDone={keyPointDone}
+            />
+          )}
+
+          {/* BASE_PLAYINGフェーズ */}
+          {gameState.phase === 'BASE_PLAYING' && (
+            <BaseBoard
+              gameState={gameState}
+              onMovePiece={movePiece}
+              onFlipBaseCard={flipBaseCard}
+              onDestroyBaseCard={destroyBaseCard}
+              onRestoreBaseCard={restoreBaseCard}
               onRestart={restartGame}
               onEnd={endGame}
             />

@@ -14,6 +14,8 @@ import {
   getEvilPlayerIds,
   restartGame,
   endGame,
+  startBase,
+  setKeyPoints,
   createFilteredGameState,
 } from './gameState';
 
@@ -277,16 +279,17 @@ export function setupSocketHandlers(
       broadcastGameState(io, state);
     });
 
-    // コマ移動
+    // コマ移動（PLAYING / BASE_PLAYING 両フェーズ対応）
     socket.on('piece:move', ({ playerId, row, col }) => {
-      if (state.phase !== 'PLAYING') {
+      if (state.phase !== 'PLAYING' && state.phase !== 'BASE_PLAYING') {
         socket.emit('error', { message: 'ゲームプレイフェーズではありません。' });
         return;
       }
 
       // 位置のバリデーション（除外ゾーン { row: -1, col: -1 } は特別に許可）
       const isEliminatedZone = row === -1 && col === -1;
-      if (!isEliminatedZone && (row < 0 || row >= 6 || col < 0 || col >= 7)) {
+      const maxCol = state.phase === 'PLAYING' ? 7 : 6;
+      if (!isEliminatedZone && (row < 0 || row >= 6 || col < 0 || col >= maxCol)) {
         socket.emit('error', { message: '無効なマス位置です。' });
         return;
       }
@@ -327,6 +330,126 @@ export function setupSocketHandlers(
         card.openedBy = flipPlayer?.id ?? null;
       }
       console.log(`カードフリップ: (${row}, ${col}) → ${card.isFaceUp ? '表' : '裏'}`);
+      broadcastGameState(io, state);
+    });
+
+    // 秘密基地編へ移行（ホストのみ・PLAYINGフェーズから）
+    socket.on('game:startBase', () => {
+      const host = state.players.find((p) => p.socketId === socket.id);
+      if (!host?.isHost) {
+        socket.emit('error', { message: 'ホストのみが操作できます。' });
+        return;
+      }
+      if (state.phase !== 'PLAYING') {
+        socket.emit('error', { message: '惑星編プレイ中のみ移行できます。' });
+        return;
+      }
+      startBase(state);
+      console.log('フェーズ移行: PLAYING → BASE_SETUP');
+      broadcastGameState(io, state);
+    });
+
+    // 重要拠点設定（evilのみ・BASE_SETUPフェーズ）
+    socket.on('keyPoint:set', ({ positions }) => {
+      const player = state.players.find((p) => p.socketId === socket.id);
+      if (player?.faction !== 'evil') {
+        socket.emit('error', { message: 'evilプレイヤーのみが重要拠点を設定できます。' });
+        return;
+      }
+      if (state.phase !== 'BASE_SETUP') {
+        socket.emit('error', { message: '重要拠点設定フェーズではありません。' });
+        return;
+      }
+      if (!positions || positions.length > 4) {
+        socket.emit('error', { message: '重要拠点は最大4箇所です。' });
+        return;
+      }
+      // 最外周（A行・F行・1列・6列）は不可（row 0,5 または col 0,5）
+      for (const pos of positions) {
+        if (pos.row < 1 || pos.row > 4 || pos.col < 1 || pos.col > 4) {
+          socket.emit('error', { message: '重要拠点は最外周（A行・F行・1列・6列）には配置できません。' });
+          return;
+        }
+      }
+      // 重複チェック
+      const posSet = new Set(positions.map((p) => `${p.row}-${p.col}`));
+      if (posSet.size !== positions.length) {
+        socket.emit('error', { message: '同じマスを複数選択できません。' });
+        return;
+      }
+      setKeyPoints(state, positions);
+      console.log(`重要拠点設定: ${JSON.stringify(positions)}`);
+      broadcastGameState(io, state);
+    });
+
+    // 重要拠点設定完了（evilのみ・4箇所必要）
+    socket.on('keyPoint:done', () => {
+      const player = state.players.find((p) => p.socketId === socket.id);
+      if (player?.faction !== 'evil') {
+        socket.emit('error', { message: 'evilプレイヤーのみが操作できます。' });
+        return;
+      }
+      if (state.phase !== 'BASE_SETUP') {
+        socket.emit('error', { message: '重要拠点設定フェーズではありません。' });
+        return;
+      }
+      if (state.keyPointPositions.length !== 4) {
+        socket.emit('error', { message: '重要拠点を4箇所設定してください。' });
+        return;
+      }
+      state.phase = 'BASE_PLAYING';
+      console.log('フェーズ移行: BASE_SETUP → BASE_PLAYING');
+      broadcastGameState(io, state);
+    });
+
+    // 秘密基地カードのフリップ（BASE_PLAYINGフェーズ）
+    socket.on('baseCard:flip', ({ row, col }) => {
+      if (state.phase !== 'BASE_PLAYING') {
+        socket.emit('error', { message: '秘密基地編プレイフェーズではありません。' });
+        return;
+      }
+      if (!state.baseBoard || row < 0 || row >= 6 || col < 0 || col >= 6) {
+        socket.emit('error', { message: '無効なマス位置です。' });
+        return;
+      }
+      const card = state.baseBoard[row][col].card;
+      if (!card) return;
+      card.isFaceUp = !card.isFaceUp;
+      console.log(`秘密基地カードフリップ: (${row}, ${col}) → ${card.isFaceUp ? '表' : '裏'}`);
+      broadcastGameState(io, state);
+    });
+
+    // 秘密基地カードの破壊（BASE_PLAYINGフェーズ）
+    socket.on('baseCard:destroy', ({ row, col }) => {
+      if (state.phase !== 'BASE_PLAYING') {
+        socket.emit('error', { message: '秘密基地編プレイフェーズではありません。' });
+        return;
+      }
+      if (!state.baseBoard || row < 0 || row >= 6 || col < 0 || col >= 6) {
+        socket.emit('error', { message: '無効なマス位置です。' });
+        return;
+      }
+      const card = state.baseBoard[row][col].card;
+      if (!card) return;
+      card.isDestroyed = true;
+      console.log(`秘密基地カード破壊: (${row}, ${col})`);
+      broadcastGameState(io, state);
+    });
+
+    // 秘密基地カードの破壊解除（BASE_PLAYINGフェーズ）
+    socket.on('baseCard:restore', ({ row, col }) => {
+      if (state.phase !== 'BASE_PLAYING') {
+        socket.emit('error', { message: '秘密基地編プレイフェーズではありません。' });
+        return;
+      }
+      if (!state.baseBoard || row < 0 || row >= 6 || col < 0 || col >= 6) {
+        socket.emit('error', { message: '無効なマス位置です。' });
+        return;
+      }
+      const card = state.baseBoard[row][col].card;
+      if (!card) return;
+      card.isDestroyed = false;
+      console.log(`秘密基地カード復元: (${row}, ${col})`);
       broadcastGameState(io, state);
     });
 

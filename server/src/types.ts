@@ -1,7 +1,7 @@
 // ゲームの型定義（サーバー側）
 
 export type Faction = 'good' | 'evil';
-export type GamePhase = 'LOBBY' | 'FACTION_SETUP' | 'AMBUSH_SETUP' | 'PLAYING';
+export type GamePhase = 'LOBBY' | 'FACTION_SETUP' | 'AMBUSH_SETUP' | 'PLAYING' | 'BASE_SETUP' | 'BASE_PLAYING';
 
 // プレイヤー情報
 export interface Player {
@@ -26,6 +26,9 @@ export interface CardData {
   isAmbush: boolean;       // 実際の待ち伏せフラグ（サーバー内部管理用）
   ambushLabel: 'A' | 'B' | null; // 待ち伏せの識別ラベル
   openedBy: string | null; // カードを開いたプレイヤーのID（能力カードの秘密情報管理用）
+  isDestroyed: boolean;    // 破壊状態（秘密基地カード用）
+  isKeyPoint: boolean;     // 重要拠点カードかどうか
+  keyPointLabel: string | null; // 重要拠点のラベル（エネルギー・ルーム等）
 }
 
 // マス情報
@@ -40,8 +43,9 @@ export interface Cell {
 export interface GameState {
   phase: GamePhase;
   players: Player[];
-  board: Cell[][];   // 6×7
-  myId: string;      // 自分のsocket.id
+  board: Cell[][];        // 6×7（惑星編）
+  baseBoard: Cell[][] | null; // 6×6（秘密基地編）
+  myId: string;           // 自分のsocket.id
   myFaction?: Faction;
   ambushSetCount: number; // AMBUSH_SETUPフェーズで何箇所設定済みか（evilのみ）
 }
@@ -52,6 +56,8 @@ export interface ServerGameState {
   players: Player[];
   board: Cell[][];
   ambushPositions: Array<{ row: number; col: number }>;
+  baseBoard: Cell[][] | null;  // 秘密基地編の6x6ボード
+  keyPointPositions: Array<{ row: number; col: number }>; // 重要拠点の位置
 }
 
 // Socket.ioのイベント型定義
@@ -68,6 +74,12 @@ export interface ClientToServerEvents {
   'card:flip': (data: { row: number; col: number }) => void;
   'game:restart': () => void;
   'game:end': () => void;
+  'game:startBase': () => void;
+  'keyPoint:set': (data: { positions: Array<{ row: number; col: number }> }) => void;
+  'keyPoint:done': () => void;
+  'baseCard:flip': (data: { row: number; col: number }) => void;
+  'baseCard:destroy': (data: { row: number; col: number }) => void;
+  'baseCard:restore': (data: { row: number; col: number }) => void;
 }
 
 export interface ServerToClientEvents {

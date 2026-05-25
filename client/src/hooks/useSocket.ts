@@ -45,6 +45,12 @@ interface ClientToServerEvents {
   'card:flip': (data: { row: number; col: number }) => void;
   'game:restart': () => void;
   'game:end': () => void;
+  'game:startBase': () => void;
+  'keyPoint:set': (data: { positions: Array<{ row: number; col: number }> }) => void;
+  'keyPoint:done': () => void;
+  'baseCard:flip': (data: { row: number; col: number }) => void;
+  'baseCard:destroy': (data: { row: number; col: number }) => void;
+  'baseCard:restore': (data: { row: number; col: number }) => void;
 }
 
 interface UseSocketReturn {
@@ -63,6 +69,12 @@ interface UseSocketReturn {
   flipCard: (row: number, col: number) => void;
   restartGame: () => void;
   endGame: () => void;
+  startBase: () => void;
+  setKeyPoint: (positions: Array<{ row: number; col: number }>) => void;
+  keyPointDone: () => void;
+  flipBaseCard: (row: number, col: number) => void;
+  destroyBaseCard: (row: number, col: number) => void;
+  restoreBaseCard: (row: number, col: number) => void;
   clearError: () => void;
 }
 
@@ -194,6 +206,36 @@ export function useSocket(): UseSocketReturn {
     socketRef.current?.emit('game:end');
   }, []);
 
+  // 秘密基地編へ移行（ホストのみ）
+  const startBase = useCallback(() => {
+    socketRef.current?.emit('game:startBase');
+  }, []);
+
+  // 重要拠点設定（evilのみ）
+  const setKeyPoint = useCallback((positions: Array<{ row: number; col: number }>) => {
+    socketRef.current?.emit('keyPoint:set', { positions });
+  }, []);
+
+  // 重要拠点設定完了（evilのみ）
+  const keyPointDone = useCallback(() => {
+    socketRef.current?.emit('keyPoint:done');
+  }, []);
+
+  // 秘密基地カードフリップ
+  const flipBaseCard = useCallback((row: number, col: number) => {
+    socketRef.current?.emit('baseCard:flip', { row, col });
+  }, []);
+
+  // 秘密基地カード破壊
+  const destroyBaseCard = useCallback((row: number, col: number) => {
+    socketRef.current?.emit('baseCard:destroy', { row, col });
+  }, []);
+
+  // 秘密基地カード破壊解除
+  const restoreBaseCard = useCallback((row: number, col: number) => {
+    socketRef.current?.emit('baseCard:restore', { row, col });
+  }, []);
+
   // エラーメッセージのクリア
   const clearError = useCallback(() => {
     setErrorMessage(null);
@@ -214,6 +256,12 @@ export function useSocket(): UseSocketReturn {
     flipCard,
     restartGame,
     endGame,
+    startBase,
+    setKeyPoint,
+    keyPointDone,
+    flipBaseCard,
+    destroyBaseCard,
+    restoreBaseCard,
     clearError,
   };
 }

@@ -16,6 +16,46 @@ const PLAYER_COLORS = [
   '#795548', // ブラウン
 ];
 
+// 重要拠点のラベル（設定順）
+export const KEY_POINT_LABELS = ['エネルギー・ルーム', 'コンピューター・ルーム', '研究室', '指令室'];
+
+// 秘密基地カード定義（52枚）
+const BASE_CARD_RAW: Array<{ name: string; count: number; content: string }> = [
+  { name: 'ESPコントローラーシステム', count: 1,  content: '説明文' },
+  { name: 'E.K.',                       count: 1,  content: '説明文' },
+  { name: 'エネルギー吸収体',           count: 3,  content: '説明文' },
+  { name: 'オーディオルーム',           count: 1,  content: '説明文' },
+  { name: 'カーンの聖母',               count: 2,  content: '説明文' },
+  { name: '喫茶店「ダリア」',           count: 1,  content: '説明文' },
+  { name: 'キング編集室',               count: 1,  content: '説明文' },
+  { name: '警戒装置 [1-1]',            count: 2,  content: '説明文' },
+  { name: '警戒装置 [1-2]',            count: 1,  content: '説明文' },
+  { name: '警戒装置 [2-1]',            count: 1,  content: '説明文' },
+  { name: '警戒装置 [2-2]',            count: 1,  content: '説明文' },
+  { name: '警戒装置 [3-2]',            count: 1,  content: '説明文' },
+  { name: '警戒装置 [3-3]',            count: 1,  content: '説明文' },
+  { name: '警戒装置 [4-3]',            count: 1,  content: '説明文' },
+  { name: '警戒装置 [4-4]',            count: 1,  content: '説明文' },
+  { name: '警戒装置 [5-4]',            count: 1,  content: '説明文' },
+  { name: '化粧室',                     count: 1,  content: '説明文' },
+  { name: '幻覚の部屋[4]',             count: 1,  content: '説明文' },
+  { name: '幻覚の部屋[6]',             count: 1,  content: '説明文' },
+  { name: 'サイン会場',                 count: 1,  content: '説明文' },
+  { name: '重積ヴォーティクス',         count: 1,  content: '説明文' },
+  { name: '通路',                       count: 10, content: '説明文' },
+  { name: 'トラップ',                   count: 2,  content: '説明文' },
+  { name: 'ノヴァ（新星）',             count: 1,  content: '説明文' },
+  { name: 'ブラックホール',             count: 1,  content: '説明文' },
+  { name: '兵員室',                     count: 3,  content: '説明文' },
+  { name: 'ホワイトホール',             count: 1,  content: '説明文' },
+  { name: '山羊牧場',                   count: 1,  content: '説明文' },
+  { name: 'ランダムテレポート',         count: 8,  content: '説明文' },
+];
+
+const BASE_CARD_DEFINITIONS = BASE_CARD_RAW.flatMap(({ name, count, content }) =>
+  Array.from({ length: count }, () => ({ name, content }))
+);
+
 // カード定義（名称・枚数・詳細テキスト・能力カード判別フラグ）
 const CARD_DEFINITIONS: Array<{ name: string; count: number; content: string; isAbility: boolean }> = [
   { name: '[能力]巡洋艦',                  count: 1,  isAbility: true,  content: '攻撃時に巡洋艦の支援を得られる。毎回サイコロを2個振り、その武器で相手を攻撃する。通常の攻撃も行える。\nサイコロの目\n2：D弾（ESPレベル6、攻撃力50）\n3：G弾（ESPレベル5、攻撃力30）\n4-6：ビームキャノン（ESPレベル4、攻撃力は武器火力チェック）\n7-11：支援なし\n12：誤爆（このカードを出したプレイヤーをビームキャノンで攻撃）' },
@@ -103,6 +143,9 @@ export function createInitialBoard(): Cell[][] {
           isAmbush: false,
           ambushLabel: null,
           openedBy: null,
+          isDestroyed: false,
+          isKeyPoint: false,
+          keyPointLabel: null,
         };
 
         rowCells.push({
@@ -119,6 +162,40 @@ export function createInitialBoard(): Cell[][] {
   return board;
 }
 
+// 秘密基地編の初期ボードを生成する（6行×6列）
+export function createInitialBaseBoard(): Cell[][] {
+  // 52枚デッキをシャッフルして先頭36枚をボードに配置
+  const deck = [...BASE_CARD_DEFINITIONS];
+  for (let i = deck.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [deck[i], deck[j]] = [deck[j], deck[i]];
+  }
+
+  const board: Cell[][] = [];
+  for (let row = 0; row < 6; row++) {
+    const rowCells: Cell[] = [];
+    for (let col = 0; col < 6; col++) {
+      const { name, content } = deck[row * 6 + col];
+      const card: CardData = {
+        id: `base-card-${row}-${col}`,
+        name,
+        content,
+        isAbility: false,
+        isFaceUp: false,
+        isAmbush: false,
+        ambushLabel: null,
+        openedBy: null,
+        isDestroyed: false,
+        isKeyPoint: false,
+        keyPointLabel: null,
+      };
+      rowCells.push({ row, col, isSpaceport: false, card });
+    }
+    board.push(rowCells);
+  }
+  return board;
+}
+
 // 初期ゲーム状態を生成する
 export function createInitialGameState(): ServerGameState {
   return {
@@ -126,6 +203,8 @@ export function createInitialGameState(): ServerGameState {
     players: [],
     board: createInitialBoard(),
     ambushPositions: [],
+    baseBoard: null,
+    keyPointPositions: [],
   };
 }
 
@@ -221,6 +300,8 @@ export function endGame(state: ServerGameState): void {
   state.phase = 'LOBBY';
   state.board = createInitialBoard();
   state.ambushPositions = [];
+  state.baseBoard = null;
+  state.keyPointPositions = [];
   state.players = []; // 全プレイヤーを削除
 }
 
@@ -229,6 +310,8 @@ export function restartGame(state: ServerGameState): void {
   state.phase = 'LOBBY';
   state.board = createInitialBoard();
   state.ambushPositions = [];
+  state.baseBoard = null;
+  state.keyPointPositions = [];
 
   // 切断中のプレイヤーを削除し、接続中のプレイヤーの状態をリセット
   state.players = state.players.filter((p) => p.isConnected);
@@ -236,6 +319,45 @@ export function restartGame(state: ServerGameState): void {
     player.faction = undefined;
     player.isApproved = player.isHost; // ホストのみ自動承認
     player.position = null;
+  });
+}
+
+// 秘密基地編に遷移する（BASE_SETUPフェーズ、全プレイヤーを除外ゾーンに移動）
+export function startBase(state: ServerGameState): void {
+  state.phase = 'BASE_SETUP';
+  state.baseBoard = createInitialBaseBoard();
+  state.keyPointPositions = [];
+  // 全プレイヤーを除外ゾーンにリセット
+  state.players.forEach((player) => {
+    player.position = { row: -1, col: -1 };
+  });
+}
+
+// 重要拠点を設定する（設定順にラベルを付与）
+export function setKeyPoints(
+  state: ServerGameState,
+  positions: Array<{ row: number; col: number }>
+): void {
+  if (!state.baseBoard) return;
+
+  // 全マスの重要拠点フラグをリセット
+  state.baseBoard.forEach((row) => {
+    row.forEach((cell) => {
+      if (cell.card) {
+        cell.card.isKeyPoint = false;
+        cell.card.keyPointLabel = null;
+      }
+    });
+  });
+
+  // 新しい重要拠点を設定（設定順にラベルを付与）
+  state.keyPointPositions = positions;
+  positions.forEach(({ row, col }, index) => {
+    const card = state.baseBoard![row][col].card;
+    if (card) {
+      card.isKeyPoint = true;
+      card.keyPointLabel = KEY_POINT_LABELS[index];
+    }
   });
 }
 
@@ -275,10 +397,31 @@ export function createFilteredGameState(
   // 待ち伏せ設定済み数（evilのみ）
   const ambushSetCount = isEvil ? state.ambushPositions.length : 0;
 
+  // 秘密基地編ボードのフィルタリング（重要拠点情報はgoodプレイヤーに非公開）
+  const filteredBaseBoard = state.baseBoard
+    ? state.baseBoard.map((row) =>
+        row.map((cell) => {
+          if (!cell.card) return cell;
+          const card = cell.card;
+          // 重要拠点情報はevilか表向きの場合のみ公開
+          const canSeeKeyPoint = isEvil || card.isFaceUp;
+          return {
+            ...cell,
+            card: {
+              ...card,
+              isKeyPoint: canSeeKeyPoint ? card.isKeyPoint : false,
+              keyPointLabel: canSeeKeyPoint ? card.keyPointLabel : null,
+            },
+          };
+        })
+      )
+    : null;
+
   return {
     phase: state.phase,
     players: state.players,
     board: filteredBoard,
+    baseBoard: filteredBaseBoard,
     myId: player?.id ?? socketId, // 安定したUUID（Player.id）を返す
     myFaction: player?.faction,
     ambushSetCount,

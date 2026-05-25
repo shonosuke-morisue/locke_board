@@ -1,7 +1,7 @@
 // ゲームの型定義（クライアント側）
 
 export type Faction = 'good' | 'evil';
-export type GamePhase = 'LOBBY' | 'FACTION_SETUP' | 'AMBUSH_SETUP' | 'PLAYING';
+export type GamePhase = 'LOBBY' | 'FACTION_SETUP' | 'AMBUSH_SETUP' | 'PLAYING' | 'BASE_SETUP' | 'BASE_PLAYING';
 
 // プレイヤー情報
 export interface Player {
@@ -25,6 +25,9 @@ export interface CardData {
   isAmbush: boolean;       // evilは常に、goodはオープン時のみtrueが送信される
   ambushLabel: 'A' | 'B' | null; // 待ち伏せの識別ラベル
   openedBy: string | null; // カードを開いたプレイヤーのID
+  isDestroyed: boolean;    // 破壊状態（秘密基地カード用）
+  isKeyPoint: boolean;     // 重要拠点カードかどうか
+  keyPointLabel: string | null; // 重要拠点のラベル
 }
 
 // マス情報
@@ -39,8 +42,9 @@ export interface Cell {
 export interface GameState {
   phase: GamePhase;
   players: Player[];
-  board: Cell[][];   // 6×7
-  myId: string;      // 自分の安定したUUID（Player.id）
+  board: Cell[][];        // 6×7（惑星編）
+  baseBoard: Cell[][] | null; // 6×6（秘密基地編）
+  myId: string;           // 自分の安定したUUID（Player.id）
   myFaction?: Faction;
   ambushSetCount: number; // AMBUSH_SETUPフェーズで何箇所設定済みか（evilのみ）
 }

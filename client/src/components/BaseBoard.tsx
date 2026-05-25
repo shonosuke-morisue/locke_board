@@ -1,56 +1,75 @@
-// ゲームボードコンポーネント
-// 6行×7列のグリッド、ドラッグ&ドロップによるコマ移動、カードのフリップを担当
+// 秘密基地編ゲームボードコンポーネント
+// 6行×6列のグリッド、ドラッグ&ドロップ、カードフリップ、コンテキストメニューを担当
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-
-// 各行の地名（行インデックス順）
-const PLANET_NAMES = ['地球', 'ロンウォール', 'セレン', 'トア', 'ディナール', 'マイア'];
-import { GameState, Cell } from '../types/game';
-import { Card } from './Card';
+import { GameState } from '../types/game';
+import { BaseCard } from './BaseCard';
 import { PlayerPiece } from './PlayerPiece';
 
-interface BoardProps {
+// 行ラベル（A〜F）
+const ROW_LABELS = ['A', 'B', 'C', 'D', 'E', 'F'];
+
+interface BaseBoardProps {
   gameState: GameState;
   onMovePiece: (playerId: string, row: number, col: number) => void;
-  onFlipCard: (row: number, col: number) => void;
+  onFlipBaseCard: (row: number, col: number) => void;
+  onDestroyBaseCard: (row: number, col: number) => void;
+  onRestoreBaseCard: (row: number, col: number) => void;
   onRestart: () => void;
   onEnd: () => void;
-  onStartBase: () => void;
 }
 
-export const Board: React.FC<BoardProps> = ({
+// コンテキストメニューの状態
+interface ContextMenuState {
+  x: number;
+  y: number;
+  row: number;
+  col: number;
+  isDestroyed: boolean;
+}
+
+export const BaseBoard: React.FC<BaseBoardProps> = ({
   gameState,
   onMovePiece,
-  onFlipCard,
+  onFlipBaseCard,
+  onDestroyBaseCard,
+  onRestoreBaseCard,
   onRestart,
   onEnd,
-  onStartBase,
 }) => {
   const myself = gameState.players.find((p) => p.id === gameState.myId);
   const isHost = myself?.isHost ?? false;
-  const isEvil = myself?.faction === 'evil';
 
-  // 詳細表示中のマス座標（座標で管理することでフリップ後も最新状態を反映）
+  // 詳細表示中のマス座標
   const [detailPos, setDetailPos] = useState<{ row: number; col: number } | null>(null);
-  // 詳細表示中の実際のカード（gameStateから導出）
-  const detailCard = detailPos
-    ? (gameState.board[detailPos.row]?.[detailPos.col]?.card ?? null)
+  const detailCard = detailPos && gameState.baseBoard
+    ? (gameState.baseBoard[detailPos.row]?.[detailPos.col]?.card ?? null)
     : null;
+
+  // コンテキストメニュー
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
 
   // ドラッグ中のプレイヤーID（マウス）
   const [draggingPlayerId, setDraggingPlayerId] = useState<string | null>(null);
 
-  // ドラッグオーバー中のマス（マウス・タッチ共通）
+  // ドラッグオーバー中のマス
   const [dragOverCell, setDragOverCell] = useState<{ row: number; col: number } | null>(null);
 
-  // 除外ゾーンのドラッグオーバー状態（マウス・タッチ共通）
+  // 除外ゾーンのドラッグオーバー状態
   const [dragOverEliminated, setDragOverEliminated] = useState(false);
 
   // タッチドラッグ中のプレイヤーID
   const [touchDraggingPlayerId, setTouchDraggingPlayerId] = useState<string | null>(null);
-  // touchend で最新の drop target を参照するための ref
   const touchDropCellRef = useRef<{ row: number; col: number } | null>(null);
   const touchDropEliminatedRef = useRef(false);
+
+  // コンテキストメニューを外クリックで閉じる
+  useEffect(() => {
+    if (!contextMenu) return;
+    const handleClick = () => setContextMenu(null);
+    document.addEventListener('click', handleClick);
+    return () => document.removeEventListener('click', handleClick);
+  }, [contextMenu]);
 
   // ドラッグ開始
   const handleDragStart = useCallback(
@@ -62,7 +81,7 @@ export const Board: React.FC<BoardProps> = ({
     []
   );
 
-  // ドラッグオーバー（ドロップ可能を示す）
+  // ドラッグオーバー
   const handleDragOver = useCallback(
     (e: React.DragEvent, row: number, col: number) => {
       e.preventDefault();
@@ -77,18 +96,17 @@ export const Board: React.FC<BoardProps> = ({
     setDragOverCell(null);
   }, []);
 
-  // タッチドラッグ開始（PlayerPieceからコールバック）
+  // タッチドラッグ開始
   const handleTouchDragStart = useCallback((playerId: string) => {
     setTouchDraggingPlayerId(playerId);
   }, []);
 
-  // タッチドラッグ中のドキュメントレベルイベントリスナー
-  // ※ スクロール防止のため passive: false で登録する
+  // タッチドラッグ中ドキュメントレベルリスナー
   useEffect(() => {
     if (!touchDraggingPlayerId) return;
 
     const handleTouchMove = (e: TouchEvent) => {
-      e.preventDefault(); // スクロール防止
+      e.preventDefault();
       const touch = e.touches[0];
       const el = document.elementFromPoint(touch.clientX, touch.clientY);
       if (!el) {
@@ -98,7 +116,6 @@ export const Board: React.FC<BoardProps> = ({
         touchDropEliminatedRef.current = false;
         return;
       }
-      // data-row, data-col 属性を持つ要素（またはその祖先）を探す
       const cellEl = (el as Element).closest('[data-row]') as HTMLElement | null;
       if (cellEl?.dataset.row !== undefined && cellEl?.dataset.col !== undefined) {
         const row = parseInt(cellEl.dataset.row, 10);
@@ -111,7 +128,6 @@ export const Board: React.FC<BoardProps> = ({
           return;
         }
       }
-      // 除外ゾーンをチェック
       if ((el as Element).closest('[data-eliminated]')) {
         setDragOverEliminated(true);
         setDragOverCell(null);
@@ -149,7 +165,7 @@ export const Board: React.FC<BoardProps> = ({
     };
   }, [touchDraggingPlayerId, onMovePiece]);
 
-  // ドロップ（コマを移動）
+  // ドロップ
   const handleDrop = useCallback(
     (e: React.DragEvent, row: number, col: number) => {
       e.preventDefault();
@@ -163,69 +179,56 @@ export const Board: React.FC<BoardProps> = ({
     [draggingPlayerId, onMovePiece]
   );
 
-  // カードのダブルクリック（フリップ）
-  // 裏カードをフリップした場合は詳細パネルも表示する
+  // カードダブルクリック（フリップ）
   const handleCardDoubleClick = useCallback(
     (row: number, col: number) => {
-      const card = gameState.board[row]?.[col]?.card;
+      const card = gameState.baseBoard?.[row]?.[col]?.card;
       if (card && !card.isFaceUp) {
         setDetailPos({ row, col });
       }
-      onFlipCard(row, col);
+      onFlipBaseCard(row, col);
     },
-    [onFlipCard, gameState.board]
+    [onFlipBaseCard, gameState.baseBoard]
   );
 
-  // カードのクリック（詳細表示）
+  // カードクリック（詳細表示）
   const handleCardSelect = useCallback((row: number, col: number) => {
     setDetailPos({ row, col });
   }, []);
+
+  // コンテキストメニューを開く
+  const handleContextMenu = useCallback(
+    (row: number, col: number, x: number, y: number) => {
+      const card = gameState.baseBoard?.[row]?.[col]?.card;
+      if (!card) return;
+      setContextMenu({ x, y, row, col, isDestroyed: card.isDestroyed });
+    },
+    [gameState.baseBoard]
+  );
 
   // このマスにいるプレイヤーを取得
   const getPlayersAtCell = useCallback(
     (row: number, col: number) => {
       return gameState.players.filter(
-        (p) =>
-          p.isApproved &&
-          p.position?.row === row &&
-          p.position?.col === col
+        (p) => p.isApproved && p.position?.row === row && p.position?.col === col
       );
     },
     [gameState.players]
   );
 
-  // 除外ゾーンにいるプレイヤーを取得
+  // 除外ゾーンにいるプレイヤー
   const eliminatedPlayers = gameState.players.filter(
     (p) => p.isApproved && p.position?.row === -1 && p.position?.col === -1
   );
 
-  // マスのスタイルを取得
-  const getCellStyle = (cell: Cell): React.CSSProperties => {
-    const isDragOver =
-      dragOverCell?.row === cell.row && dragOverCell?.col === cell.col;
-
-    if (cell.isSpaceport) {
-      return {
-        ...styles.cell,
-        ...styles.spaceportCell,
-        ...(isDragOver ? styles.dragOverCell : {}),
-      };
-    }
-
-    return {
-      ...styles.cell,
-      ...styles.cardCell,
-      ...(isDragOver ? styles.dragOverCell : {}),
-    };
-  };
+  if (!gameState.baseBoard) return null;
 
   return (
     <div style={styles.container}>
       {/* ヘッダー */}
       <div style={styles.header}>
-        <h2 style={styles.title}>第1部「惑星編」</h2>
+        <h2 style={styles.title}>第2部「秘密基地編」</h2>
         <div style={styles.headerRight}>
-          {/* 自分の陣営表示 */}
           {myself?.faction && (
             <span
               style={{
@@ -236,19 +239,8 @@ export const Board: React.FC<BoardProps> = ({
               {myself.faction === 'good' ? '秩序（Good）' : '混沌（Evil）'}
             </span>
           )}
-          {/* ホスト専用ボタン */}
           {isHost && (
             <div style={styles.hostButtons}>
-              <button
-                onClick={() => {
-                  if (window.confirm('秘密基地編に移行します。よろしいですか？')) {
-                    onStartBase();
-                  }
-                }}
-                style={styles.startBaseButton}
-              >
-                秘密基地編へ
-              </button>
               <button onClick={onRestart} style={styles.restartButton}>
                 リスタート
               </button>
@@ -273,12 +265,7 @@ export const Board: React.FC<BoardProps> = ({
           .filter((p) => p.isApproved)
           .map((player) => (
             <div key={player.id} style={styles.playerBadge}>
-              <span
-                style={{
-                  ...styles.colorDot,
-                  backgroundColor: player.color,
-                }}
-              />
+              <span style={{ ...styles.colorDot, backgroundColor: player.color }} />
               <span style={styles.playerName}>{player.name}</span>
               {player.id === gameState.myId && (
                 <span style={styles.meLabel}>(あなた)</span>
@@ -295,117 +282,108 @@ export const Board: React.FC<BoardProps> = ({
           ))}
       </div>
 
-      {/* ボードエリア（グリッド + カード詳細パネル） */}
+      {/* ボードエリア（グリッド + 詳細パネル） */}
       <div style={styles.boardArea}>
 
-      {/* ボードグリッド */}
-      <div style={styles.board}>
-        {/* ボード行 */}
-        {gameState.board.map((rowCells, rowIndex) => (
-          <div key={rowIndex} style={styles.boardRow}>
-            {rowCells.map((cell) => {
-              const playersHere = getPlayersAtCell(cell.row, cell.col);
-              return (
-                <div
-                  key={`${cell.row}-${cell.col}`}
-                  data-row={cell.row}
-                  data-col={cell.col}
-                  style={getCellStyle(cell)}
-                  onDragOver={(e) => handleDragOver(e, cell.row, cell.col)}
-                  onDragLeave={handleDragLeave}
-                  onDrop={(e) => handleDrop(e, cell.row, cell.col)}
-                >
-                  {/* 宇宙港マス */}
-                  {cell.isSpaceport && (
-                    <div style={styles.spaceportContent}>
-                      <span style={styles.spaceportLabel}>
-                        {PLANET_NAMES[cell.row]}宇宙港
-                      </span>
-                      <span style={styles.spaceportIcon}>🚀</span>
-                    </div>
-                  )}
-
-                  {/* カードマス */}
-                  {!cell.isSpaceport && cell.card && (
-                    <div style={styles.cardWrapper}>
-                      {/* マス名ラベル */}
-                      <div style={styles.cellLabel}>
-                        {PLANET_NAMES[cell.row]}{cell.col}
-                      </div>
-                      <Card
-                        card={cell.card}
-                        isEvil={isEvil}
-                        onDoubleClick={() =>
-                          handleCardDoubleClick(cell.row, cell.col)
-                        }
-                        onSelect={() => handleCardSelect(cell.row, cell.col)}
-                      />
-                    </div>
-                  )}
-
-                  {/* このマスにいるコマ */}
-                  {playersHere.length > 0 && (
-                    <div style={styles.piecesContainer}>
-                      {playersHere.map((player) => (
-                        <PlayerPiece
-                          key={player.id}
-                          player={player}
-                          isMyPiece={player.id === gameState.myId}
-                          onDragStart={handleDragStart}
-                          onTouchDragStart={handleTouchDragStart}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+        {/* ボードグリッド */}
+        <div style={styles.board}>
+          {/* 列ヘッダー行 */}
+          <div style={styles.boardRow}>
+            <div style={styles.cornerCell} />
+            {[1, 2, 3, 4, 5, 6].map((colNum) => (
+              <div key={colNum} style={styles.colHeader}>{colNum}</div>
+            ))}
           </div>
-        ))}
-      </div>
 
-      {/* カード詳細パネル（グリッド右側） */}
-      <div style={styles.detailPanel}>
-        {detailCard ? (
-          <>
-            <div style={{
-              ...styles.detailTitle,
-              ...(detailCard.isAmbush ? styles.detailTitleAmbush : {}),
-            }}>
-              {detailCard.isAmbush ? '⚠ 待ち伏せ！' : (detailCard.name || '能力カード')}
-            </div>
-            <div style={styles.detailBody}>
-              {detailCard.isAmbush ? (
-                <p style={styles.detailAmbushText}>
-                  このマスには待ち伏せが仕掛けられていた！
-                </p>
-              ) : detailCard.isAbility && !detailCard.name ? (
-                // 他人が開いた能力カード（サーバーがname・contentを隠蔽）
-                <p style={styles.detailEmpty}>
-                  他のプレイヤーが取得した能力カードです。内容は本人のみ確認できます。
-                </p>
-              ) : detailCard.content ? (
-                <p style={styles.detailText}>{detailCard.content}</p>
-              ) : (
-                <p style={styles.detailEmpty}>テキストなし</p>
-              )}
-            </div>
-            <div style={styles.detailId}>ID: {detailCard.id}</div>
-            <button
-              style={styles.detailCloseButton}
-              onClick={() => setDetailPos(null)}
-            >
-              閉じる
-            </button>
-          </>
-        ) : (
-          <p style={styles.detailPlaceholder}>
-            表向きカードをクリックすると詳細が表示されます
-          </p>
-        )}
-      </div>
+          {/* データ行 */}
+          {gameState.baseBoard.map((rowCells, rowIndex) => (
+            <div key={rowIndex} style={styles.boardRow}>
+              {/* 行ヘッダー */}
+              <div style={styles.rowHeader}>{ROW_LABELS[rowIndex]}</div>
 
-      </div>{/* boardArea 終了 */}
+              {rowCells.map((cell) => {
+                const playersHere = getPlayersAtCell(cell.row, cell.col);
+                const isDragOver =
+                  dragOverCell?.row === cell.row && dragOverCell?.col === cell.col;
+
+                return (
+                  <div
+                    key={`${cell.row}-${cell.col}`}
+                    data-row={cell.row}
+                    data-col={cell.col}
+                    style={{
+                      ...styles.cell,
+                      ...(isDragOver ? styles.dragOverCell : {}),
+                    }}
+                    onDragOver={(e) => handleDragOver(e, cell.row, cell.col)}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => handleDrop(e, cell.row, cell.col)}
+                  >
+                    {cell.card && (
+                      <div style={styles.cardWrapper}>
+                        <BaseCard
+                          card={cell.card}
+                          onDoubleClick={() => handleCardDoubleClick(cell.row, cell.col)}
+                          onSelect={() => handleCardSelect(cell.row, cell.col)}
+                          onContextMenu={(x, y) => handleContextMenu(cell.row, cell.col, x, y)}
+                        />
+                      </div>
+                    )}
+                    {playersHere.length > 0 && (
+                      <div style={styles.piecesContainer}>
+                        {playersHere.map((player) => (
+                          <PlayerPiece
+                            key={player.id}
+                            player={player}
+                            isMyPiece={player.id === gameState.myId}
+                            onDragStart={handleDragStart}
+                            onTouchDragStart={handleTouchDragStart}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+
+        {/* 詳細パネル */}
+        <div style={styles.detailPanel}>
+          {detailCard ? (
+            <>
+              <div style={{
+                ...styles.detailTitle,
+                ...(detailCard.isKeyPoint ? styles.detailTitleKeyPoint : {}),
+                ...(detailCard.isDestroyed ? styles.detailTitleDestroyed : {}),
+              }}>
+                {detailCard.isDestroyed
+                  ? `${detailCard.isKeyPoint && detailCard.keyPointLabel ? detailCard.keyPointLabel : detailCard.name} 破壊`
+                  : (detailCard.isKeyPoint && detailCard.keyPointLabel ? detailCard.keyPointLabel : detailCard.name)}
+              </div>
+              <div style={styles.detailBody}>
+                {detailCard.isDestroyed ? (
+                  <p style={styles.detailDestroyedText}>このカードは破壊されています。</p>
+                ) : detailCard.content ? (
+                  <p style={styles.detailText}>{detailCard.content}</p>
+                ) : (
+                  <p style={styles.detailEmpty}>テキストなし</p>
+                )}
+              </div>
+              <div style={styles.detailId}>ID: {detailCard.id}</div>
+              <button style={styles.detailCloseButton} onClick={() => setDetailPos(null)}>
+                閉じる
+              </button>
+            </>
+          ) : (
+            <p style={styles.detailPlaceholder}>
+              表向きカードをクリックすると詳細が表示されます
+            </p>
+          )}
+        </div>
+
+      </div>
 
       {/* 除外ゾーン */}
       <div
@@ -445,14 +423,46 @@ export const Board: React.FC<BoardProps> = ({
 
       {/* 操作説明 */}
       <div style={styles.instructions}>
-        <p>コマ: ドラッグ&ドロップで移動 | 表カード: クリックで詳細表示 / ダブルクリックで裏返す | 裏カード: ダブルクリックで開く</p>
+        <p>コマ: ドラッグ&ドロップで移動 | 表カード: クリックで詳細 / ダブルクリックで裏返す / 右クリック(2本指)でメニュー | 裏カード: ダブルクリックで開く</p>
       </div>
 
+      {/* コンテキストメニュー */}
+      {contextMenu && (
+        <div
+          style={{
+            ...styles.contextMenu,
+            top: contextMenu.y,
+            left: contextMenu.x,
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {contextMenu.isDestroyed ? (
+            <button
+              style={styles.contextMenuItem}
+              onClick={() => {
+                onRestoreBaseCard(contextMenu.row, contextMenu.col);
+                setContextMenu(null);
+              }}
+            >
+              元に戻す
+            </button>
+          ) : (
+            <button
+              style={{ ...styles.contextMenuItem, ...styles.contextMenuItemDestroy }}
+              onClick={() => {
+                onDestroyBaseCard(contextMenu.row, contextMenu.col);
+                setContextMenu(null);
+              }}
+            >
+              破壊
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 };
 
-// スタイル定義
 const styles: { [key: string]: React.CSSProperties } = {
   container: {
     padding: '20px',
@@ -467,7 +477,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   title: {
     fontSize: '1.5rem',
-    color: '#7b68ee',
+    color: '#c8960a',
   },
   headerRight: {
     display: 'flex',
@@ -491,15 +501,6 @@ const styles: { [key: string]: React.CSSProperties } = {
   hostButtons: {
     display: 'flex',
     gap: '8px',
-  },
-  startBaseButton: {
-    backgroundColor: '#3a2a0a',
-    color: '#c8960a',
-    fontSize: '13px',
-    padding: '8px 16px',
-    borderRadius: '6px',
-    border: '1px solid #c8960a',
-    fontWeight: 'bold',
   },
   restartButton: {
     backgroundColor: '#555',
@@ -556,15 +557,82 @@ const styles: { [key: string]: React.CSSProperties } = {
     flex: '1 1 0',
     minWidth: 0,
     backgroundColor: '#0d1a2e',
-    border: '2px solid #2a3a5a',
+    border: '2px solid #3a2a0a',
     borderRadius: '8px',
     overflow: 'hidden',
+  },
+  boardRow: {
+    display: 'flex',
+    borderBottom: '1px solid #1a2a4a',
+  },
+  cornerCell: {
+    width: '28px',
+    flexShrink: 0,
+    borderRight: '1px solid #1a2a4a',
+    backgroundColor: '#0d0d1e',
+  },
+  colHeader: {
+    flex: 1,
+    height: '24px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '11px',
+    color: '#888',
+    borderRight: '1px solid #1a2a4a',
+    backgroundColor: '#0d0d1e',
+    fontWeight: 'bold',
+  },
+  rowHeader: {
+    width: '28px',
+    flexShrink: 0,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '11px',
+    color: '#888',
+    fontWeight: 'bold',
+    borderRight: '1px solid #1a2a4a',
+    backgroundColor: '#0d0d1e',
+  },
+  cell: {
+    flex: 1,
+    minHeight: '80px',
+    position: 'relative',
+    borderRight: '1px solid #1a2a4a',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '4px',
+    flexDirection: 'column',
+    gap: '4px',
+    backgroundColor: '#1a1a2e',
+  },
+  dragOverCell: {
+    backgroundColor: '#2a3a5a',
+    outline: '2px dashed #c8960a',
+  },
+  cardWrapper: {
+    width: '100%',
+    height: '56px',
+    position: 'relative',
+  },
+  piecesContainer: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '2px',
+    justifyContent: 'center',
+    position: 'absolute',
+    bottom: '2px',
+    left: '2px',
+    right: '2px',
+    zIndex: 10,
   },
   detailPanel: {
     width: '200px',
     flexShrink: 0,
     backgroundColor: '#111827',
-    border: '1px solid #2a3a5a',
+    border: '1px solid #3a2a0a',
     borderRadius: '8px',
     padding: '16px',
     minHeight: '200px',
@@ -580,8 +648,11 @@ const styles: { [key: string]: React.CSSProperties } = {
     borderBottom: '1px solid #2a3a5a',
     paddingBottom: '8px',
   },
-  detailTitleAmbush: {
-    color: '#e74c3c',
+  detailTitleKeyPoint: {
+    color: '#f0c040',
+  },
+  detailTitleDestroyed: {
+    color: '#ff6060',
   },
   detailBody: {
     flex: 1,
@@ -596,9 +667,9 @@ const styles: { [key: string]: React.CSSProperties } = {
     whiteSpace: 'pre-wrap' as const,
     margin: 0,
   },
-  detailAmbushText: {
+  detailDestroyedText: {
     fontSize: '13px',
-    color: '#e74c3c',
+    color: '#ff6060',
     lineHeight: 1.7,
     margin: 0,
   },
@@ -627,80 +698,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     lineHeight: 1.6,
     margin: 0,
   },
-  boardRow: {
-    display: 'flex',
-    borderBottom: '1px solid #1a2a4a',
-  },
-  cell: {
-    flex: 1,
-    minHeight: '95px',
-    position: 'relative',
-    borderRight: '1px solid #1a2a4a',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '4px',
-    flexDirection: 'column',
-    gap: '4px',
-  },
-  spaceportCell: {
-    backgroundColor: '#0d1530',
-  },
-  cardCell: {
-    backgroundColor: '#1a1a2e',
-  },
-  dragOverCell: {
-    backgroundColor: '#2a3a5a',
-    outline: '2px dashed #7b68ee',
-  },
-  spaceportContent: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: '2px',
-  },
-  spaceportIcon: {
-    fontSize: '20px',
-  },
-  spaceportLabel: {
-    fontSize: '11px',
-    color: '#e8e0ff',
-    fontWeight: 'bold',
-    textShadow: '0 1px 2px rgba(0,0,0,0.6)',
-  },
-  cellLabel: {
-    fontSize: '11px',
-    color: '#e8e0ff',
-    textAlign: 'center',
-    lineHeight: 1.2,
-    wordBreak: 'keep-all',
-    marginBottom: '2px',
-    flexShrink: 0,
-    fontWeight: 'bold',
-    textShadow: '0 1px 2px rgba(0,0,0,0.6)',
-  },
-  cardWrapper: {
-    width: '100%',
-    height: '56px',
-    position: 'relative',
-  },
-  piecesContainer: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    gap: '2px',
-    justifyContent: 'center',
-    position: 'absolute',
-    bottom: '2px',
-    left: '2px',
-    right: '2px',
-    zIndex: 10,
-  },
-  instructions: {
-    textAlign: 'center',
-    fontSize: '12px',
-    color: '#555',
-    padding: '8px',
-  },
   eliminatedZone: {
     backgroundColor: '#1a0d0d',
     border: '2px dashed #5a2a2a',
@@ -722,5 +719,33 @@ const styles: { [key: string]: React.CSSProperties } = {
     display: 'flex',
     flexWrap: 'wrap',
     gap: '4px',
+  },
+  instructions: {
+    textAlign: 'center',
+    fontSize: '12px',
+    color: '#555',
+    padding: '8px',
+  },
+  contextMenu: {
+    position: 'fixed',
+    backgroundColor: '#1a1a2e',
+    border: '1px solid #3a3a5a',
+    borderRadius: '6px',
+    boxShadow: '0 4px 16px rgba(0,0,0,0.6)',
+    zIndex: 1000,
+    overflow: 'hidden',
+  },
+  contextMenuItem: {
+    display: 'block',
+    width: '100%',
+    padding: '10px 20px',
+    backgroundColor: 'transparent',
+    color: '#ddd',
+    fontSize: '14px',
+    textAlign: 'left' as const,
+    cursor: 'pointer',
+  },
+  contextMenuItemDestroy: {
+    color: '#ff6060',
   },
 };

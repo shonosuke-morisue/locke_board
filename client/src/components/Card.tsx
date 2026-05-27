@@ -1,13 +1,9 @@
 // カードコンポーネント
 // 伏せ状態・表状態の切り替え、待ち伏せ表示を担当
 
-import React, { useRef } from 'react';
+import React from 'react';
 import { CardData } from '../types/game';
-
-// ダブルタップ判定の閾値（ミリ秒）
-const DOUBLE_TAP_DURATION = 300;
-// タッチ移動キャンセル閾値（px）
-const TOUCH_MOVE_THRESHOLD = 10;
+import { useTouchTap } from '../hooks/useTouchTap';
 
 interface CardProps {
   card: CardData;
@@ -22,56 +18,11 @@ export const Card: React.FC<CardProps> = ({
   onDoubleClick,
   onSelect,
 }) => {
-  // タッチ開始位置（移動キャンセル判定用）
-  const touchStartPos = useRef<{ x: number; y: number } | null>(null);
-  // 最後にタップした時刻（ダブルタップ判定用）
-  const lastTapTime = useRef<number>(0);
-  // タッチによるフリップが直前に発火したかどうか
-  // （iOS が後続で発火する dblclick イベントを無視するためのフラグ）
-  const touchFlippedRef = useRef(false);
-
-  // dblclick ハンドラ（タッチによるフリップ直後は無視する）
-  const handleDoubleClick = () => {
-    if (touchFlippedRef.current) return;
-    onDoubleClick();
-  };
-
-  // タッチ開始（開始位置を記録）
-  const handleTouchStart = (e: React.TouchEvent) => {
-    const touch = e.touches[0];
-    touchStartPos.current = { x: touch.clientX, y: touch.clientY };
-  };
-
-  // タッチ終了（シングルタップ / ダブルタップ判定）
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    e.preventDefault();
-    if (!touchStartPos.current) return;
-
-    // 終了位置との差分でタップか移動かを判定
-    const touch = e.changedTouches[0];
-    const dx = Math.abs(touch.clientX - touchStartPos.current.x);
-    const dy = Math.abs(touch.clientY - touchStartPos.current.y);
-    touchStartPos.current = null;
-
-    // 大きく動いた場合はタップ扱いしない（スクロール等）
-    if (dx > TOUCH_MOVE_THRESHOLD || dy > TOUCH_MOVE_THRESHOLD) return;
-
-    const now = Date.now();
-    if (now - lastTapTime.current < DOUBLE_TAP_DURATION) {
-      // ダブルタップ → フリップ
-      touchFlippedRef.current = true;
-      setTimeout(() => { touchFlippedRef.current = false; }, 500);
-      onDoubleClick();
-      lastTapTime.current = 0;
-    } else {
-      lastTapTime.current = now;
-      // シングルタップ: 表カードなら詳細表示
-      if (card.isFaceUp) {
-        onSelect();
-      }
-      // 裏カードはダブルタップのみフリップ
-    }
-  };
+  const { handleDoubleClick, handleTouchStart, handleTouchEnd } = useTouchTap({
+    isFaceUp: card.isFaceUp,
+    onDoubleTap: onDoubleClick,
+    onSingleTap: onSelect,
+  });
 
   // カード名称（能力カードで他人が開いた場合は隠す）
   const cardTitle = card.name || '能力カード';

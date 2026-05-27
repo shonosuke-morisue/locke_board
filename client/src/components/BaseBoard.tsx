@@ -1,13 +1,12 @@
 // 秘密基地編ゲームボードコンポーネント
 // 6行×6列のグリッド、ドラッグ&ドロップ、カードフリップ、コンテキストメニューを担当
 
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { GameState } from '../types/game';
 import { BaseCard } from './BaseCard';
 import { PlayerPiece } from './PlayerPiece';
-
-// 行ラベル（A〜F）
-const ROW_LABELS = ['A', 'B', 'C', 'D', 'E', 'F'];
+import { useTouchDrag } from '../hooks/useTouchDrag';
+import { ROW_LABELS } from '../constants';
 
 interface BaseBoardProps {
   gameState: GameState;
@@ -52,16 +51,14 @@ export const BaseBoard: React.FC<BaseBoardProps> = ({
   // ドラッグ中のプレイヤーID（マウス）
   const [draggingPlayerId, setDraggingPlayerId] = useState<string | null>(null);
 
-  // ドラッグオーバー中のマス
-  const [dragOverCell, setDragOverCell] = useState<{ row: number; col: number } | null>(null);
-
-  // 除外ゾーンのドラッグオーバー状態
-  const [dragOverEliminated, setDragOverEliminated] = useState(false);
-
-  // タッチドラッグ中のプレイヤーID
-  const [touchDraggingPlayerId, setTouchDraggingPlayerId] = useState<string | null>(null);
-  const touchDropCellRef = useRef<{ row: number; col: number } | null>(null);
-  const touchDropEliminatedRef = useRef(false);
+  // タッチドラッグ操作（ドラッグオーバー状態の管理も含む）
+  const {
+    dragOverCell,
+    dragOverEliminated,
+    setDragOverCell,
+    setDragOverEliminated,
+    handleTouchDragStart,
+  } = useTouchDrag(onMovePiece);
 
   // コンテキストメニューを外クリックで閉じる
   useEffect(() => {
@@ -88,82 +85,13 @@ export const BaseBoard: React.FC<BaseBoardProps> = ({
       e.dataTransfer.dropEffect = 'move';
       setDragOverCell({ row, col });
     },
-    []
+    [setDragOverCell]
   );
 
   // ドラッグリーブ
   const handleDragLeave = useCallback(() => {
     setDragOverCell(null);
-  }, []);
-
-  // タッチドラッグ開始
-  const handleTouchDragStart = useCallback((playerId: string) => {
-    setTouchDraggingPlayerId(playerId);
-  }, []);
-
-  // タッチドラッグ中ドキュメントレベルリスナー
-  useEffect(() => {
-    if (!touchDraggingPlayerId) return;
-
-    const handleTouchMove = (e: TouchEvent) => {
-      e.preventDefault();
-      const touch = e.touches[0];
-      const el = document.elementFromPoint(touch.clientX, touch.clientY);
-      if (!el) {
-        setDragOverCell(null);
-        setDragOverEliminated(false);
-        touchDropCellRef.current = null;
-        touchDropEliminatedRef.current = false;
-        return;
-      }
-      const cellEl = (el as Element).closest('[data-row]') as HTMLElement | null;
-      if (cellEl?.dataset.row !== undefined && cellEl?.dataset.col !== undefined) {
-        const row = parseInt(cellEl.dataset.row, 10);
-        const col = parseInt(cellEl.dataset.col, 10);
-        if (!isNaN(row) && !isNaN(col)) {
-          setDragOverCell({ row, col });
-          setDragOverEliminated(false);
-          touchDropCellRef.current = { row, col };
-          touchDropEliminatedRef.current = false;
-          return;
-        }
-      }
-      if ((el as Element).closest('[data-eliminated]')) {
-        setDragOverEliminated(true);
-        setDragOverCell(null);
-        touchDropCellRef.current = null;
-        touchDropEliminatedRef.current = true;
-        return;
-      }
-      setDragOverCell(null);
-      setDragOverEliminated(false);
-      touchDropCellRef.current = null;
-      touchDropEliminatedRef.current = false;
-    };
-
-    const handleTouchEnd = () => {
-      const playerId = touchDraggingPlayerId;
-      if (playerId) {
-        if (touchDropCellRef.current) {
-          onMovePiece(playerId, touchDropCellRef.current.row, touchDropCellRef.current.col);
-        } else if (touchDropEliminatedRef.current) {
-          onMovePiece(playerId, -1, -1);
-        }
-      }
-      setTouchDraggingPlayerId(null);
-      setDragOverCell(null);
-      setDragOverEliminated(false);
-      touchDropCellRef.current = null;
-      touchDropEliminatedRef.current = false;
-    };
-
-    document.addEventListener('touchmove', handleTouchMove, { passive: false });
-    document.addEventListener('touchend', handleTouchEnd);
-    return () => {
-      document.removeEventListener('touchmove', handleTouchMove);
-      document.removeEventListener('touchend', handleTouchEnd);
-    };
-  }, [touchDraggingPlayerId, onMovePiece]);
+  }, [setDragOverCell]);
 
   // ドロップ
   const handleDrop = useCallback(
@@ -176,7 +104,7 @@ export const BaseBoard: React.FC<BaseBoardProps> = ({
       setDraggingPlayerId(null);
       setDragOverCell(null);
     },
-    [draggingPlayerId, onMovePiece]
+    [draggingPlayerId, onMovePiece, setDragOverCell]
   );
 
   // カードダブルクリック（フリップ）

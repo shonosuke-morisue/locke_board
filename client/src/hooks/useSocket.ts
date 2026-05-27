@@ -78,6 +78,18 @@ interface UseSocketReturn {
   clearError: () => void;
 }
 
+// HTTPSが使えない環境でも動作するUUID生成（crypto.randomUUID非対応時のフォールバック）
+function generateUUID(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
 export function useSocket(): UseSocketReturn {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -132,18 +144,6 @@ export function useSocket(): UseSocketReturn {
       socketRef.current = null;
     };
   }, []);
-
-  // HTTPSが使えない環境でも動作するUUID生成（crypto.randomUUID非対応時のフォールバック）
-  function generateUUID(): string {
-    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-      return crypto.randomUUID();
-    }
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-      const r = Math.random() * 16 | 0;
-      const v = c === 'x' ? r : (r & 0x3 | 0x8);
-      return v.toString(16);
-    });
-  }
 
   // プレイヤー参加（初回）
   const joinGame = useCallback((name: string) => {

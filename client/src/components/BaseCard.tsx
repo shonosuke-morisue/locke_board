@@ -1,11 +1,9 @@
 // 秘密基地カードコンポーネント
 // 裏面・表面・破壊状態の表示と、フリップ・コンテキストメニューの操作を担当
 
-import React, { useRef } from 'react';
+import React from 'react';
 import { CardData } from '../types/game';
-
-const DOUBLE_TAP_DURATION = 300;
-const TOUCH_MOVE_THRESHOLD = 10;
+import { useTouchTap } from '../hooks/useTouchTap';
 
 interface BaseCardProps {
   card: CardData;
@@ -20,62 +18,18 @@ export const BaseCard: React.FC<BaseCardProps> = ({
   onSelect,
   onContextMenu,
 }) => {
-  const touchStartPos = useRef<{ x: number; y: number } | null>(null);
-  const lastTapTime = useRef<number>(0);
-  const touchFlippedRef = useRef(false);
-
-  // dblclick ハンドラ（タッチによるフリップ直後は無視）
-  const handleDoubleClick = () => {
-    if (touchFlippedRef.current) return;
-    onDoubleClick();
-  };
+  const { handleDoubleClick, handleTouchStart, handleTouchEnd } = useTouchTap({
+    isFaceUp: card.isFaceUp,
+    onDoubleTap: onDoubleClick,
+    onSingleTap: onSelect,
+    onTwoFingerTap: onContextMenu,
+  });
 
   // 右クリックでコンテキストメニュー（表向きカードのみ）
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
     if (card.isFaceUp) {
       onContextMenu(e.clientX, e.clientY);
-    }
-  };
-
-  // タッチ開始（2本指でコンテキストメニュー、1本指は通常操作）
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (e.touches.length === 2 && card.isFaceUp) {
-      e.preventDefault();
-      const touch = e.touches[0];
-      onContextMenu(touch.clientX, touch.clientY);
-      return;
-    }
-    if (e.touches.length === 1) {
-      const touch = e.touches[0];
-      touchStartPos.current = { x: touch.clientX, y: touch.clientY };
-    }
-  };
-
-  // タッチ終了（シングルタップ / ダブルタップ判定）
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (e.touches.length > 0) return; // まだ指が残っている場合はスキップ
-    e.preventDefault();
-    if (!touchStartPos.current) return;
-
-    const touch = e.changedTouches[0];
-    const dx = Math.abs(touch.clientX - touchStartPos.current.x);
-    const dy = Math.abs(touch.clientY - touchStartPos.current.y);
-    touchStartPos.current = null;
-
-    if (dx > TOUCH_MOVE_THRESHOLD || dy > TOUCH_MOVE_THRESHOLD) return;
-
-    const now = Date.now();
-    if (now - lastTapTime.current < DOUBLE_TAP_DURATION) {
-      touchFlippedRef.current = true;
-      setTimeout(() => { touchFlippedRef.current = false; }, 500);
-      onDoubleClick();
-      lastTapTime.current = 0;
-    } else {
-      lastTapTime.current = now;
-      if (card.isFaceUp) {
-        onSelect();
-      }
     }
   };
 

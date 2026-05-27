@@ -3,9 +3,7 @@
 
 import React from 'react';
 import { GameState } from '../types/game';
-
-// 各行の地名（行インデックス順）
-const PLANET_NAMES = ['地球', 'ロンウォール', 'セレン', 'トア', 'ディナール', 'マイア'];
+import { PLANET_NAMES } from '../constants';
 
 interface AmbushSetupProps {
   gameState: GameState;

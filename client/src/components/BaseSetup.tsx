@@ -3,11 +3,7 @@
 
 import React from 'react';
 import { GameState } from '../types/game';
-
-// 行ラベル（A〜F）
-const ROW_LABELS = ['A', 'B', 'C', 'D', 'E', 'F'];
-// 重要拠点のラベル（設定順）
-const KEY_POINT_LABELS = ['エネルギー・ルーム', 'コンピューター・ルーム', '研究室', '指令室'];
+import { ROW_LABELS, KEY_POINT_LABELS } from '../constants';
 
 interface BaseSetupProps {
   gameState: GameState;

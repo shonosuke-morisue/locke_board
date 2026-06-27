@@ -20,7 +20,7 @@ tools: Read, Grep, Glob, Bash
 3. **待ち伏せ（惑星編）**: `isAmbush` / `ambushLabel` は、`evil` または当該カードが表向き(`isFaceUp`)のときのみ true / 値ありになっているか。good に伏せ状態で漏れていないか。
 4. **重要拠点（秘密基地編）**: `isKeyPoint` / `keyPointLabel`、および差し替え後の `name` / `content` が、`evil` または表向きのときのみ公開されているか。
 5. **集計値の漏洩**: `ambushSetCount` などの集計が `evil` 以外に実数を返していないか。`ambushPositions` / `keyPointPositions` といった生の位置配列が GameState に含まれて送信されていないか。
-6. **players 配列の漏洩**: 送信される `players` に、good 陣営に見せてはいけない情報（各プレイヤーの `faction` など、誰が evil かを特定できる情報）が含まれていないか。クライアント向け `Player` 型に何が含まれるかを `types.ts` で必ず確認する。
+6. **players 配列の個人秘匿情報**: 送信される `players` に、本来不要な内部情報（`socketId` などの識別子）が含まれていないか。**ただし `faction`（good/evil）はこのプロジェクトでは全体に対する公開情報であり、good 陣営に見えても漏洩ではない**（本Webアプリは大きなゲームの一部で、陣営は全プレイヤーに公知という前提）。したがって **faction の露出を漏洩として指摘してはならない**。クライアント向け `Player` 型に何が含まれるかは `types.ts` で確認する。
 7. **新フィールドの取りこぼし**: `GameState` 型に追加されたフィールドが、フィルタを通さず素通しになっていないか。スプレッド（`...card` / `...cell`）によって、意図せず内部専用フィールドがそのまま送信されていないか。
 
 ## 進め方

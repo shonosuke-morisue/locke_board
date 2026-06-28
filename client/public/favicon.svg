@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <!-- 差し替え用プレースホルダ favicon（後で本番画像に置き換える） -->
+  <rect width="64" height="64" rx="12" fill="#1a1a2e"/>
+  <text x="32" y="44" font-size="36" text-anchor="middle" fill="#e74c3c" font-family="sans-serif" font-weight="bold">L</text>
+</svg>

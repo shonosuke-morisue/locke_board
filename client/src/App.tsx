@@ -26,6 +26,7 @@ const App: React.FC = () => {
     flipCard,
     destroyCard,
     restoreCard,
+    rollDice,
     restartGame,
     endGame,
     startBase,
@@ -108,6 +109,7 @@ const App: React.FC = () => {
               onFlipCard={flipCard}
               onDestroyCard={destroyCard}
               onRestoreCard={restoreCard}
+              onRollDice={rollDice}
               onRestart={restartGame}
               onEnd={endGame}
               onStartBase={startBase}
@@ -131,6 +133,7 @@ const App: React.FC = () => {
               onFlipBaseCard={flipBaseCard}
               onDestroyBaseCard={destroyBaseCard}
               onRestoreBaseCard={restoreBaseCard}
+              onRollDice={rollDice}
               onRestart={restartGame}
               onEnd={endGame}
             />

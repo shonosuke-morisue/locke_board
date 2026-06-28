@@ -45,6 +45,7 @@ interface ClientToServerEvents {
   'card:flip': (data: { row: number; col: number }) => void;
   'card:destroy': (data: { row: number; col: number }) => void;
   'card:restore': (data: { row: number; col: number }) => void;
+  'dice:roll': () => void;
   'game:restart': () => void;
   'game:end': () => void;
   'game:startBase': () => void;
@@ -71,6 +72,7 @@ interface UseSocketReturn {
   flipCard: (row: number, col: number) => void;
   destroyCard: (row: number, col: number) => void;
   restoreCard: (row: number, col: number) => void;
+  rollDice: () => void;
   restartGame: () => void;
   endGame: () => void;
   startBase: () => void;
@@ -210,6 +212,11 @@ export function useSocket(): UseSocketReturn {
     socketRef.current?.emit('card:restore', { row, col });
   }, []);
 
+  // ダイスロール（全員可）
+  const rollDice = useCallback(() => {
+    socketRef.current?.emit('dice:roll');
+  }, []);
+
   // ゲームリスタート（ホストのみ）
   const restartGame = useCallback(() => {
     socketRef.current?.emit('game:restart');
@@ -270,6 +277,7 @@ export function useSocket(): UseSocketReturn {
     flipCard,
     destroyCard,
     restoreCard,
+    rollDice,
     restartGame,
     endGame,
     startBase,

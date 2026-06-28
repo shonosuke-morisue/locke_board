@@ -16,6 +16,7 @@ import {
   startBase,
   setKeyPoints,
   dealAmbushCards,
+  rollDice,
   createFilteredGameState,
 } from './gameState';
 
@@ -365,6 +366,15 @@ export function setupSocketHandlers(
       if (!card) return;
       card.isDestroyed = false;
       console.log(`カード復元: (${row}, ${col})`);
+      broadcastGameState(io, state);
+    });
+
+    // ダイスロール（参加済みプレイヤーなら誰でも可）
+    socket.on('dice:roll', () => {
+      const player = state.players.find((p) => p.socketId === socket.id);
+      if (!player) return;
+      rollDice(state, player.name);
+      console.log(`ダイスロール: ${player.name} → [${state.dice.values.join(', ')}]`);
       broadcastGameState(io, state);
     });
 

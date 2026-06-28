@@ -38,6 +38,13 @@ export interface Cell {
   card: CardData | null;
 }
 
+// ダイス（2個）の状態（全員共有）
+export interface DiceState {
+  values: [number, number];     // 各サイコロの目（1〜6）
+  rolledByName: string | null;  // 最後にロールしたプレイヤー名
+  rollId: number;               // ロールごとに増えるカウンタ（アニメーション検知用）
+}
+
 // サーバーから受信するゲーム状態
 export interface GameState {
   phase: GamePhase;
@@ -46,4 +53,5 @@ export interface GameState {
   baseBoard: Cell[][] | null; // 6×6（秘密基地編）
   myId: string;           // 自分の安定したUUID（Player.id）
   myDealtCard?: { name: string; content: string } | null; // 自分に配布された能力カード（evilのみ）
+  dice: DiceState;        // ダイスの状態（全員共有）
 }

@@ -40,6 +40,13 @@ export interface Cell {
   card: CardData | null;
 }
 
+// ダイス（2個）の状態。サーバーが生成し全クライアントへ同期する公開情報
+export interface DiceState {
+  values: [number, number];     // 各サイコロの目（1〜6）
+  rolledByName: string | null;  // 最後にロールしたプレイヤー名
+  rollId: number;               // ロールごとに増えるカウンタ（アニメーション検知用）
+}
+
 // クライアントに送信するゲーム状態
 export interface GameState {
   phase: GamePhase;
@@ -48,6 +55,7 @@ export interface GameState {
   baseBoard: Cell[][] | null; // 6×6（秘密基地編）
   myId: string;           // 自分の安定したUUID（Player.id）
   myDealtCard?: { name: string; content: string } | null; // 自分に配布された能力カード（evilのみ）
+  dice: DiceState;        // ダイスの状態（全員共有）
 }
 
 // サーバー内部のゲーム状態（フィルタリング前の完全な状態）
@@ -58,6 +66,7 @@ export interface ServerGameState {
   ambushPositions: Array<{ row: number; col: number }>;
   baseBoard: Cell[][] | null;  // 秘密基地編の6x6ボード
   keyPointPositions: Array<{ row: number; col: number }>; // 重要拠点の位置
+  dice: DiceState;             // ダイスの状態（全員共有）
 }
 
 // Socket.ioのイベント型定義
@@ -74,6 +83,7 @@ export interface ClientToServerEvents {
   'card:flip': (data: { row: number; col: number }) => void;
   'card:destroy': (data: { row: number; col: number }) => void;
   'card:restore': (data: { row: number; col: number }) => void;
+  'dice:roll': () => void;
   'game:restart': () => void;
   'game:end': () => void;
   'game:startBase': () => void;

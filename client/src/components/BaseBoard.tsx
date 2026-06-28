@@ -7,6 +7,7 @@ import { BaseCard } from './BaseCard';
 import { PlayerPiece } from './PlayerPiece';
 import { useTouchDrag } from '../hooks/useTouchDrag';
 import { DealtCardModal } from './DealtCardModal';
+import { DicePanel } from './DicePanel';
 import { ROW_LABELS } from '../constants';
 
 interface BaseBoardProps {
@@ -15,6 +16,7 @@ interface BaseBoardProps {
   onFlipBaseCard: (row: number, col: number) => void;
   onDestroyBaseCard: (row: number, col: number) => void;
   onRestoreBaseCard: (row: number, col: number) => void;
+  onRollDice: () => void;
   onRestart: () => void;
   onEnd: () => void;
 }
@@ -34,6 +36,7 @@ export const BaseBoard: React.FC<BaseBoardProps> = ({
   onFlipBaseCard,
   onDestroyBaseCard,
   onRestoreBaseCard,
+  onRollDice,
   onRestart,
   onEnd,
 }) => {
@@ -317,6 +320,11 @@ export const BaseBoard: React.FC<BaseBoardProps> = ({
           ))}
         </div>
 
+        {/* 右サイド: ダイス + カード詳細 */}
+        <div style={styles.sidePanel}>
+        {/* ダイスパネル（詳細の上に配置） */}
+        <DicePanel dice={gameState.dice} onRoll={onRollDice} />
+
         {/* 詳細パネル */}
         <div style={styles.detailPanel}>
           {detailCard ? (
@@ -368,6 +376,7 @@ export const BaseBoard: React.FC<BaseBoardProps> = ({
             </p>
           )}
         </div>
+        </div>{/* 右サイド 終了 */}
 
       </div>
 
@@ -626,9 +635,14 @@ const styles: { [key: string]: React.CSSProperties } = {
     right: '2px',
     zIndex: 10,
   },
-  detailPanel: {
-    // 広い画面では約200px、折り返し時は全幅まで広がる
+  sidePanel: {
+    // 広い画面では約200px、折り返し時は全幅まで広がる（縦にダイス→詳細を並べる）
     flex: '1 1 200px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px',
+  },
+  detailPanel: {
     backgroundColor: '#111827',
     border: '1px solid #3a2a0a',
     borderRadius: '8px',

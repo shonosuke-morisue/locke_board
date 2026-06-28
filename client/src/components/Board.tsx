@@ -7,6 +7,7 @@ import { Card } from './Card';
 import { PlayerPiece } from './PlayerPiece';
 import { useTouchDrag } from '../hooks/useTouchDrag';
 import { DealtCardModal } from './DealtCardModal';
+import { DicePanel } from './DicePanel';
 import { PLANET_NAMES } from '../constants';
 
 interface BoardProps {
@@ -15,6 +16,7 @@ interface BoardProps {
   onFlipCard: (row: number, col: number) => void;
   onDestroyCard: (row: number, col: number) => void;
   onRestoreCard: (row: number, col: number) => void;
+  onRollDice: () => void;
   onRestart: () => void;
   onEnd: () => void;
   onStartBase: () => void;
@@ -35,6 +37,7 @@ export const Board: React.FC<BoardProps> = ({
   onFlipCard,
   onDestroyCard,
   onRestoreCard,
+  onRollDice,
   onRestart,
   onEnd,
   onStartBase,
@@ -369,7 +372,12 @@ export const Board: React.FC<BoardProps> = ({
         ))}
       </div>
 
-      {/* カード詳細パネル（グリッド右側） */}
+      {/* 右サイド: ダイス + カード詳細（グリッド右側） */}
+      <div style={styles.sidePanel}>
+      {/* ダイスパネル（詳細の上に配置） */}
+      <DicePanel dice={gameState.dice} onRoll={onRollDice} />
+
+      {/* カード詳細パネル */}
       <div style={styles.detailPanel}>
         {detailCard ? (
           <>
@@ -433,6 +441,7 @@ export const Board: React.FC<BoardProps> = ({
           </p>
         )}
       </div>
+      </div>{/* 右サイド 終了 */}
 
       </div>{/* boardArea 終了 */}
 
@@ -635,9 +644,14 @@ const styles: { [key: string]: React.CSSProperties } = {
     borderRadius: '8px',
     overflow: 'hidden',
   },
-  detailPanel: {
-    // 広い画面では約200px、折り返し時は全幅まで広がる
+  sidePanel: {
+    // 広い画面では約200px、折り返し時は全幅まで広がる（縦にダイス→詳細を並べる）
     flex: '1 1 200px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px',
+  },
+  detailPanel: {
     backgroundColor: '#111827',
     border: '1px solid #2a3a5a',
     borderRadius: '8px',

@@ -1,6 +1,6 @@
 // ゲーム状態の管理モジュール
 
-import { ServerGameState, Player, Cell, CardData, Faction } from './types';
+import { ServerGameState, Player, Cell, CardData, Faction, DiceState } from './types';
 
 // プレイヤーコマの色プリセット（最大10人分）
 const PLAYER_COLORS = [
@@ -211,6 +211,11 @@ export function createInitialBaseBoard(): Cell[][] {
 }
 
 // 初期ゲーム状態を生成する
+// ダイスの初期状態を生成する
+function createInitialDice(): DiceState {
+  return { values: [1, 1], rolledByName: null, rollId: 0 };
+}
+
 export function createInitialGameState(): ServerGameState {
   return {
     phase: 'LOBBY',
@@ -219,6 +224,7 @@ export function createInitialGameState(): ServerGameState {
     ambushPositions: [],
     baseBoard: null,
     keyPointPositions: [],
+    dice: createInitialDice(),
   };
 }
 
@@ -343,6 +349,7 @@ export function endGame(state: ServerGameState): void {
   state.ambushPositions = [];
   state.baseBoard = null;
   state.keyPointPositions = [];
+  state.dice = createInitialDice();
   state.players = []; // 全プレイヤーを削除
 }
 
@@ -353,6 +360,7 @@ export function restartGame(state: ServerGameState): void {
   state.ambushPositions = [];
   state.baseBoard = null;
   state.keyPointPositions = [];
+  state.dice = createInitialDice();
 
   // 切断中のプレイヤーを削除し、接続中のプレイヤーの状態をリセット
   state.players = state.players.filter((p) => p.isConnected);
@@ -362,6 +370,16 @@ export function restartGame(state: ServerGameState): void {
     player.position = null;
     player.dealtCard = null;
   });
+}
+
+// ダイスを振る（2個・1〜6）。全員共有のダイス状態を更新する
+export function rollDice(state: ServerGameState, playerName: string): void {
+  const roll = () => Math.floor(Math.random() * 6) + 1;
+  state.dice = {
+    values: [roll(), roll()],
+    rolledByName: playerName,
+    rollId: state.dice.rollId + 1,
+  };
 }
 
 // 秘密基地編に遷移する（BASE_SETUPフェーズ、全プレイヤーを除外ゾーンに移動）
@@ -476,5 +494,6 @@ export function createFilteredGameState(
     baseBoard: filteredBaseBoard,
     myId: player?.id ?? socketId, // 安定したUUID（Player.id）を返す
     myDealtCard: player?.dealtCard ?? null, // 自分に配布された能力カード（evilのみ）
+    dice: state.dice, // ダイスは公開情報（フィルタなし）
   };
 }

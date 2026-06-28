@@ -6,6 +6,7 @@ import { GameState } from '../types/game';
 import { BaseCard } from './BaseCard';
 import { PlayerPiece } from './PlayerPiece';
 import { useTouchDrag } from '../hooks/useTouchDrag';
+import { DealtCardModal } from './DealtCardModal';
 import { ROW_LABELS } from '../constants';
 
 interface BaseBoardProps {
@@ -41,6 +42,8 @@ export const BaseBoard: React.FC<BaseBoardProps> = ({
 
   // 詳細表示中のマス座標
   const [detailPos, setDetailPos] = useState<{ row: number; col: number } | null>(null);
+  // 自分の名前クリックで配布カードを表示するかどうか
+  const [showDealtCard, setShowDealtCard] = useState(false);
   const detailCard = detailPos && gameState.baseBoard
     ? (gameState.baseBoard[detailPos.row]?.[detailPos.col]?.card ?? null)
     : null;
@@ -191,13 +194,26 @@ export const BaseBoard: React.FC<BaseBoardProps> = ({
       <div style={styles.playerList}>
         {gameState.players
           .filter((p) => p.isApproved)
-          .map((player) => (
-            <div key={player.id} style={styles.playerBadge}>
+          .map((player) => {
+            const isMe = player.id === gameState.myId;
+            // 自分の名前で、配布カードがある場合はクリックで表示できる
+            const canShowCard = isMe && !!gameState.myDealtCard;
+            return (
+            <div
+              key={player.id}
+              style={{
+                ...styles.playerBadge,
+                ...(canShowCard ? styles.clickableBadge : {}),
+              }}
+              onClick={canShowCard ? () => setShowDealtCard(true) : undefined}
+              title={canShowCard ? '配布された能力カードを表示' : undefined}
+            >
               <span style={{ ...styles.colorDot, backgroundColor: player.color }} />
               <span style={styles.playerName}>{player.name}</span>
-              {player.id === gameState.myId && (
+              {isMe && (
                 <span style={styles.meLabel}>(あなた)</span>
               )}
+              {canShowCard && <span style={styles.cardHint}>🎴</span>}
               {player.faction && (
                 <span style={{
                   ...styles.factionLabel,
@@ -207,8 +223,17 @@ export const BaseBoard: React.FC<BaseBoardProps> = ({
                 </span>
               )}
             </div>
-          ))}
+            );
+          })}
       </div>
+
+      {/* 配布された能力カードのポップアップ（自分の名前クリックで表示） */}
+      {showDealtCard && gameState.myDealtCard && (
+        <DealtCardModal
+          card={gameState.myDealtCard}
+          onClose={() => setShowDealtCard(false)}
+        />
+      )}
 
       {/* ボードエリア（グリッド + 詳細パネル） */}
       <div style={styles.boardArea}>
@@ -344,6 +369,7 @@ export const BaseBoard: React.FC<BaseBoardProps> = ({
               player={player}
               isMyPiece={player.id === gameState.myId}
               onDragStart={handleDragStart}
+              onTouchDragStart={handleTouchDragStart}
             />
           ))}
         </div>
@@ -474,6 +500,13 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   factionLabel: {
     fontSize: '11px',
+  },
+  clickableBadge: {
+    cursor: 'pointer',
+    border: '1px solid #e74c3c',
+  },
+  cardHint: {
+    fontSize: '12px',
   },
   boardArea: {
     display: 'flex',

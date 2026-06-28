@@ -1,26 +1,40 @@
 // ゲームボードコンポーネント
 // 6行×7列のグリッド、ドラッグ&ドロップによるコマ移動、カードのフリップを担当
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { GameState, Cell } from '../types/game';
 import { Card } from './Card';
 import { PlayerPiece } from './PlayerPiece';
 import { useTouchDrag } from '../hooks/useTouchDrag';
+import { DealtCardModal } from './DealtCardModal';
 import { PLANET_NAMES } from '../constants';
 
 interface BoardProps {
   gameState: GameState;
   onMovePiece: (playerId: string, row: number, col: number) => void;
   onFlipCard: (row: number, col: number) => void;
+  onDestroyCard: (row: number, col: number) => void;
+  onRestoreCard: (row: number, col: number) => void;
   onRestart: () => void;
   onEnd: () => void;
   onStartBase: () => void;
+}
+
+// コンテキストメニューの状態
+interface ContextMenuState {
+  x: number;
+  y: number;
+  row: number;
+  col: number;
+  isDestroyed: boolean;
 }
 
 export const Board: React.FC<BoardProps> = ({
   gameState,
   onMovePiece,
   onFlipCard,
+  onDestroyCard,
+  onRestoreCard,
   onRestart,
   onEnd,
   onStartBase,
@@ -31,13 +45,26 @@ export const Board: React.FC<BoardProps> = ({
 
   // 詳細表示中のマス座標（座標で管理することでフリップ後も最新状態を反映）
   const [detailPos, setDetailPos] = useState<{ row: number; col: number } | null>(null);
+  // 自分の名前クリックで配布カードを表示するかどうか
+  const [showDealtCard, setShowDealtCard] = useState(false);
   // 詳細表示中の実際のカード（gameStateから導出）
   const detailCard = detailPos
     ? (gameState.board[detailPos.row]?.[detailPos.col]?.card ?? null)
     : null;
 
+  // コンテキストメニュー（破壊 / 元に戻す）
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+
   // ドラッグ中のプレイヤーID（マウス）
   const [draggingPlayerId, setDraggingPlayerId] = useState<string | null>(null);
+
+  // コンテキストメニューを外クリックで閉じる
+  useEffect(() => {
+    if (!contextMenu) return;
+    const handleClick = () => setContextMenu(null);
+    document.addEventListener('click', handleClick);
+    return () => document.removeEventListener('click', handleClick);
+  }, [contextMenu]);
 
   // タッチドラッグ操作（ドラッグオーバー状態の管理も含む）
   const {
@@ -104,6 +131,16 @@ export const Board: React.FC<BoardProps> = ({
   const handleCardSelect = useCallback((row: number, col: number) => {
     setDetailPos({ row, col });
   }, []);
+
+  // コンテキストメニューを開く
+  const handleContextMenu = useCallback(
+    (row: number, col: number, x: number, y: number) => {
+      const card = gameState.board[row]?.[col]?.card;
+      if (!card) return;
+      setContextMenu({ x, y, row, col, isDestroyed: card.isDestroyed });
+    },
+    [gameState.board]
+  );
 
   // このマスにいるプレイヤーを取得
   const getPlayersAtCell = useCallback(
@@ -195,8 +232,20 @@ export const Board: React.FC<BoardProps> = ({
       <div style={styles.playerList}>
         {gameState.players
           .filter((p) => p.isApproved)
-          .map((player) => (
-            <div key={player.id} style={styles.playerBadge}>
+          .map((player) => {
+            const isMe = player.id === gameState.myId;
+            // 自分の名前で、配布カードがある場合はクリックで表示できる
+            const canShowCard = isMe && !!gameState.myDealtCard;
+            return (
+            <div
+              key={player.id}
+              style={{
+                ...styles.playerBadge,
+                ...(canShowCard ? styles.clickableBadge : {}),
+              }}
+              onClick={canShowCard ? () => setShowDealtCard(true) : undefined}
+              title={canShowCard ? '配布された能力カードを表示' : undefined}
+            >
               <span
                 style={{
                   ...styles.colorDot,
@@ -204,9 +253,10 @@ export const Board: React.FC<BoardProps> = ({
                 }}
               />
               <span style={styles.playerName}>{player.name}</span>
-              {player.id === gameState.myId && (
+              {isMe && (
                 <span style={styles.meLabel}>(あなた)</span>
               )}
+              {canShowCard && <span style={styles.cardHint}>🎴</span>}
               {player.faction && (
                 <span style={{
                   ...styles.factionLabel,
@@ -216,14 +266,31 @@ export const Board: React.FC<BoardProps> = ({
                 </span>
               )}
             </div>
-          ))}
+            );
+          })}
       </div>
+
+      {/* 配布された能力カードのポップアップ（自分の名前クリックで表示） */}
+      {showDealtCard && gameState.myDealtCard && (
+        <DealtCardModal
+          card={gameState.myDealtCard}
+          onClose={() => setShowDealtCard(false)}
+        />
+      )}
 
       {/* ボードエリア（グリッド + カード詳細パネル） */}
       <div style={styles.boardArea}>
 
       {/* ボードグリッド */}
       <div style={styles.board}>
+        {/* 列番号ヘッダー（宇宙港列は空、列1〜6に数値を表示） */}
+        <div style={styles.boardHeaderRow}>
+          {gameState.board[0]?.map((cell) => (
+            <div key={cell.col} style={styles.headerCell}>
+              {cell.isSpaceport ? '' : cell.col}
+            </div>
+          ))}
+        </div>
         {/* ボード行 */}
         {gameState.board.map((rowCells, rowIndex) => (
           <div key={rowIndex} style={styles.boardRow}>
@@ -243,7 +310,7 @@ export const Board: React.FC<BoardProps> = ({
                   {cell.isSpaceport && (
                     <div style={styles.spaceportContent}>
                       <span style={styles.spaceportLabel}>
-                        {PLANET_NAMES[cell.row]}宇宙港
+                        {PLANET_NAMES[cell.row]}<br />宇宙港
                       </span>
                       <span style={styles.spaceportIcon}>🚀</span>
                     </div>
@@ -252,10 +319,6 @@ export const Board: React.FC<BoardProps> = ({
                   {/* カードマス */}
                   {!cell.isSpaceport && cell.card && (
                     <div style={styles.cardWrapper}>
-                      {/* マス名ラベル */}
-                      <div style={styles.cellLabel}>
-                        {PLANET_NAMES[cell.row]}{cell.col}
-                      </div>
                       <Card
                         card={cell.card}
                         isEvil={isEvil}
@@ -263,6 +326,9 @@ export const Board: React.FC<BoardProps> = ({
                           handleCardDoubleClick(cell.row, cell.col)
                         }
                         onSelect={() => handleCardSelect(cell.row, cell.col)}
+                        onContextMenu={(x, y) =>
+                          handleContextMenu(cell.row, cell.col, x, y)
+                        }
                       />
                     </div>
                   )}
@@ -295,11 +361,17 @@ export const Board: React.FC<BoardProps> = ({
             <div style={{
               ...styles.detailTitle,
               ...(detailCard.isAmbush ? styles.detailTitleAmbush : {}),
+              ...(detailCard.isDestroyed ? styles.detailTitleDestroyed : {}),
             }}>
-              {detailCard.isAmbush ? '⚠ 待ち伏せ！' : (detailCard.name || '能力カード')}
+              {(() => {
+                const baseTitle = detailCard.isAmbush ? '⚠ 待ち伏せ！' : (detailCard.name || '能力カード');
+                return detailCard.isDestroyed ? `${baseTitle} 破壊` : baseTitle;
+              })()}
             </div>
             <div style={styles.detailBody}>
-              {detailCard.isAmbush ? (
+              {detailCard.isDestroyed ? (
+                <p style={styles.detailDestroyedText}>このカードは破壊されています。</p>
+              ) : detailCard.isAmbush ? (
                 <p style={styles.detailAmbushText}>
                   このマスには待ち伏せが仕掛けられていた！
                 </p>
@@ -362,6 +434,7 @@ export const Board: React.FC<BoardProps> = ({
               player={player}
               isMyPiece={player.id === gameState.myId}
               onDragStart={handleDragStart}
+              onTouchDragStart={handleTouchDragStart}
             />
           ))}
         </div>
@@ -369,8 +442,42 @@ export const Board: React.FC<BoardProps> = ({
 
       {/* 操作説明 */}
       <div style={styles.instructions}>
-        <p>コマ: ドラッグ&ドロップで移動 | 表カード: クリックで詳細表示 / ダブルクリックで裏返す | 裏カード: ダブルクリックで開く</p>
+        <p>コマ: ドラッグ&ドロップで移動 | 表カード: クリックで詳細 / ダブルクリックで裏返す / 右クリック(2本指)でメニュー | 裏カード: ダブルクリックで開く</p>
       </div>
+
+      {/* コンテキストメニュー */}
+      {contextMenu && (
+        <div
+          style={{
+            ...styles.contextMenu,
+            top: contextMenu.y,
+            left: contextMenu.x,
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {contextMenu.isDestroyed ? (
+            <button
+              style={styles.contextMenuItem}
+              onClick={() => {
+                onRestoreCard(contextMenu.row, contextMenu.col);
+                setContextMenu(null);
+              }}
+            >
+              元に戻す
+            </button>
+          ) : (
+            <button
+              style={{ ...styles.contextMenuItem, ...styles.contextMenuItemDestroy }}
+              onClick={() => {
+                onDestroyCard(contextMenu.row, contextMenu.col);
+                setContextMenu(null);
+              }}
+            >
+              破壊
+            </button>
+          )}
+        </div>
+      )}
 
     </div>
   );
@@ -470,6 +577,13 @@ const styles: { [key: string]: React.CSSProperties } = {
   factionLabel: {
     fontSize: '11px',
   },
+  clickableBadge: {
+    cursor: 'pointer',
+    border: '1px solid #e74c3c',
+  },
+  cardHint: {
+    fontSize: '12px',
+  },
   boardArea: {
     display: 'flex',
     gap: '12px',
@@ -506,6 +620,15 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   detailTitleAmbush: {
     color: '#e74c3c',
+  },
+  detailTitleDestroyed: {
+    color: '#ff6060',
+  },
+  detailDestroyedText: {
+    fontSize: '13px',
+    color: '#ff6060',
+    lineHeight: 1.7,
+    margin: 0,
   },
   detailBody: {
     flex: 1,
@@ -590,18 +713,23 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: '11px',
     color: '#e8e0ff',
     fontWeight: 'bold',
+    textAlign: 'center',
+    lineHeight: 1.3,
     textShadow: '0 1px 2px rgba(0,0,0,0.6)',
   },
-  cellLabel: {
-    fontSize: '11px',
-    color: '#e8e0ff',
+  boardHeaderRow: {
+    display: 'flex',
+    borderBottom: '1px solid #2a3a5a',
+    backgroundColor: '#0d1530',
+  },
+  headerCell: {
+    flex: 1,
     textAlign: 'center',
-    lineHeight: 1.2,
-    wordBreak: 'keep-all',
-    marginBottom: '2px',
-    flexShrink: 0,
+    fontSize: '12px',
     fontWeight: 'bold',
-    textShadow: '0 1px 2px rgba(0,0,0,0.6)',
+    color: '#8a9bbf',
+    padding: '4px 0',
+    borderRight: '1px solid #1a2a4a',
   },
   cardWrapper: {
     width: '100%',
@@ -646,5 +774,27 @@ const styles: { [key: string]: React.CSSProperties } = {
     display: 'flex',
     flexWrap: 'wrap',
     gap: '4px',
+  },
+  contextMenu: {
+    position: 'fixed',
+    backgroundColor: '#1a1a2e',
+    border: '1px solid #3a3a5a',
+    borderRadius: '6px',
+    boxShadow: '0 4px 16px rgba(0,0,0,0.6)',
+    zIndex: 1000,
+    overflow: 'hidden',
+  },
+  contextMenuItem: {
+    display: 'block',
+    width: '100%',
+    padding: '10px 20px',
+    backgroundColor: 'transparent',
+    color: '#ddd',
+    fontSize: '14px',
+    textAlign: 'left' as const,
+    cursor: 'pointer',
+  },
+  contextMenuItemDestroy: {
+    color: '#ff6060',
   },
 };

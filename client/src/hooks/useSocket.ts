@@ -43,6 +43,8 @@ interface ClientToServerEvents {
   'ambush:done': () => void;
   'piece:move': (data: { playerId: string; row: number; col: number }) => void;
   'card:flip': (data: { row: number; col: number }) => void;
+  'card:destroy': (data: { row: number; col: number }) => void;
+  'card:restore': (data: { row: number; col: number }) => void;
   'game:restart': () => void;
   'game:end': () => void;
   'game:startBase': () => void;
@@ -67,6 +69,8 @@ interface UseSocketReturn {
   ambushDone: () => void;
   movePiece: (playerId: string, row: number, col: number) => void;
   flipCard: (row: number, col: number) => void;
+  destroyCard: (row: number, col: number) => void;
+  restoreCard: (row: number, col: number) => void;
   restartGame: () => void;
   endGame: () => void;
   startBase: () => void;
@@ -196,6 +200,16 @@ export function useSocket(): UseSocketReturn {
     socketRef.current?.emit('card:flip', { row, col });
   }, []);
 
+  // 惑星編カード破壊
+  const destroyCard = useCallback((row: number, col: number) => {
+    socketRef.current?.emit('card:destroy', { row, col });
+  }, []);
+
+  // 惑星編カード破壊解除
+  const restoreCard = useCallback((row: number, col: number) => {
+    socketRef.current?.emit('card:restore', { row, col });
+  }, []);
+
   // ゲームリスタート（ホストのみ）
   const restartGame = useCallback(() => {
     socketRef.current?.emit('game:restart');
@@ -254,6 +268,8 @@ export function useSocket(): UseSocketReturn {
     ambushDone,
     movePiece,
     flipCard,
+    destroyCard,
+    restoreCard,
     restartGame,
     endGame,
     startBase,

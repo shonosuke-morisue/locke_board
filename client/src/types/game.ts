@@ -45,6 +45,5 @@ export interface GameState {
   board: Cell[][];        // 6×7（惑星編）
   baseBoard: Cell[][] | null; // 6×6（秘密基地編）
   myId: string;           // 自分の安定したUUID（Player.id）
-  myFaction?: Faction;
-  ambushSetCount: number; // AMBUSH_SETUPフェーズで何箇所設定済みか（evilのみ）
+  myDealtCard?: { name: string; content: string } | null; // 自分に配布された能力カード（evilのみ）
 }

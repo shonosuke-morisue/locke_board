@@ -1,9 +1,10 @@
 // 待ち伏せ設定画面コンポーネント
 // evilプレイヤーがボード上の2箇所を待ち伏せに設定する
 
-import React from 'react';
+import React, { useState } from 'react';
 import { GameState } from '../types/game';
 import { PLANET_NAMES } from '../constants';
+import { DealtCardModal } from './DealtCardModal';
 
 interface AmbushSetupProps {
   gameState: GameState;
@@ -18,6 +19,11 @@ export const AmbushSetup: React.FC<AmbushSetupProps> = ({
 }) => {
   const myself = gameState.players.find((p) => p.id === gameState.myId);
   const isEvil = myself?.faction === 'evil';
+
+  // このフェーズ開始時に配布された能力カード（evil・本人にのみ送信される）
+  const dealtCard = gameState.myDealtCard;
+  // 画面遷移時にポップアップ表示。閉じる／再表示できる。
+  const [showDealtCard, setShowDealtCard] = useState(true);
 
   // サーバー状態のみを正とする（ローカル状態は持たない）
   // クリックのたびに即サーバーへ送信し、全evilプレイヤーにリアルタイム同期する
@@ -76,6 +82,11 @@ export const AmbushSetup: React.FC<AmbushSetupProps> = ({
     <div style={styles.container}>
       <h1 style={styles.title}>待ち伏せ設定</h1>
 
+      {/* 配布された能力カードのポップアップ（evil・本人のみ） */}
+      {isEvil && dealtCard && showDealtCard && (
+        <DealtCardModal card={dealtCard} onClose={() => setShowDealtCard(false)} />
+      )}
+
       {isEvil ? (
         <>
           <p style={styles.evilInstruction}>
@@ -91,6 +102,18 @@ export const AmbushSetup: React.FC<AmbushSetupProps> = ({
               </strong>
             </span>
           </div>
+
+          {/* 配布カードの再表示ボタン */}
+          {dealtCard && (
+            <div style={styles.showCardRow}>
+              <button
+                style={styles.showCardButton}
+                onClick={() => setShowDealtCard(true)}
+              >
+                🎴 獲得した能力カードを表示
+              </button>
+            </div>
+          )}
 
           {/* ボードグリッド */}
           <div style={styles.board}>
@@ -291,5 +314,19 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   waitingHint: {
     color: '#666',
+  },
+  // 配布カード再表示ボタン
+  showCardRow: {
+    textAlign: 'center',
+    marginBottom: '20px',
+  },
+  showCardButton: {
+    backgroundColor: '#2c2c44',
+    color: '#ffd700',
+    fontSize: '14px',
+    padding: '8px 18px',
+    borderRadius: '6px',
+    border: '1px solid #e74c3c',
+    cursor: 'pointer',
   },
 };

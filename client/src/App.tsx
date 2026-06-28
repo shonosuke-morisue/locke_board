@@ -24,6 +24,8 @@ const App: React.FC = () => {
     ambushDone,
     movePiece,
     flipCard,
+    destroyCard,
+    restoreCard,
     restartGame,
     endGame,
     startBase,
@@ -104,6 +106,8 @@ const App: React.FC = () => {
               gameState={gameState}
               onMovePiece={movePiece}
               onFlipCard={flipCard}
+              onDestroyCard={destroyCard}
+              onRestoreCard={restoreCard}
               onRestart={restartGame}
               onEnd={endGame}
               onStartBase={startBase}

@@ -14,6 +14,7 @@ export interface Player {
   color: string;       // コマの色
   position: { row: number; col: number } | null;
   isConnected: boolean; // 現在接続中かどうか
+  dealtCard?: { name: string; content: string } | null; // AMBUSH_SETUPで配布された能力カード（evilのみ・本人にのみ送信）
 }
 
 // カードデータ（サーバー内部用・isAmbushを実際に保持）
@@ -45,9 +46,8 @@ export interface GameState {
   players: Player[];
   board: Cell[][];        // 6×7（惑星編）
   baseBoard: Cell[][] | null; // 6×6（秘密基地編）
-  myId: string;           // 自分のsocket.id
-  myFaction?: Faction;
-  ambushSetCount: number; // AMBUSH_SETUPフェーズで何箇所設定済みか（evilのみ）
+  myId: string;           // 自分の安定したUUID（Player.id）
+  myDealtCard?: { name: string; content: string } | null; // 自分に配布された能力カード（evilのみ）
 }
 
 // サーバー内部のゲーム状態（フィルタリング前の完全な状態）
@@ -72,6 +72,8 @@ export interface ClientToServerEvents {
   'ambush:done': () => void;
   'piece:move': (data: { playerId: string; row: number; col: number }) => void;
   'card:flip': (data: { row: number; col: number }) => void;
+  'card:destroy': (data: { row: number; col: number }) => void;
+  'card:restore': (data: { row: number; col: number }) => void;
   'game:restart': () => void;
   'game:end': () => void;
   'game:startBase': () => void;

@@ -11,11 +11,11 @@ import {
   reconnectPlayer,
   disconnectPlayer,
   leaveGame,
-  getEvilPlayerIds,
   restartGame,
   endGame,
   startBase,
   setKeyPoints,
+  dealAmbushCards,
   createFilteredGameState,
 } from './gameState';
 
@@ -182,7 +182,8 @@ export function setupSocketHandlers(
         return;
       }
 
-      // AMBUSH_SETUPフェーズに移行
+      // 各evilプレイヤーに能力カードを1枚配布し、配布分を除いた残りでボードを再生成してから AMBUSH_SETUP へ移行
+      dealAmbushCards(state);
       state.phase = 'AMBUSH_SETUP';
       console.log('フェーズ移行: FACTION_SETUP → AMBUSH_SETUP');
       broadcastGameState(io, state);
@@ -330,6 +331,40 @@ export function setupSocketHandlers(
         card.openedBy = flipPlayer?.id ?? null;
       }
       console.log(`カードフリップ: (${row}, ${col}) → ${card.isFaceUp ? '表' : '裏'}`);
+      broadcastGameState(io, state);
+    });
+
+    // 惑星編カードの破壊（PLAYINGフェーズ）
+    socket.on('card:destroy', ({ row, col }) => {
+      if (state.phase !== 'PLAYING') {
+        socket.emit('error', { message: 'ゲームプレイフェーズではありません。' });
+        return;
+      }
+      if (row < 0 || row >= 6 || col < 1 || col >= 7) {
+        socket.emit('error', { message: '無効なマス位置です。' });
+        return;
+      }
+      const card = state.board[row][col].card;
+      if (!card) return;
+      card.isDestroyed = true;
+      console.log(`カード破壊: (${row}, ${col})`);
+      broadcastGameState(io, state);
+    });
+
+    // 惑星編カードの破壊解除（PLAYINGフェーズ）
+    socket.on('card:restore', ({ row, col }) => {
+      if (state.phase !== 'PLAYING') {
+        socket.emit('error', { message: 'ゲームプレイフェーズではありません。' });
+        return;
+      }
+      if (row < 0 || row >= 6 || col < 1 || col >= 7) {
+        socket.emit('error', { message: '無効なマス位置です。' });
+        return;
+      }
+      const card = state.board[row][col].card;
+      if (!card) return;
+      card.isDestroyed = false;
+      console.log(`カード復元: (${row}, ${col})`);
       broadcastGameState(io, state);
     });
 

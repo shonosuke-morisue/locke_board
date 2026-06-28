@@ -40,6 +40,7 @@ export const BaseCard: React.FC<BaseCardProps> = ({
 
   if (!card.isFaceUp) {
     // 裏面
+    // 重要拠点は裏面でも赤い★を表示する（サーバー側のフィルタにより evil にのみ isKeyPoint=true が届く）
     return (
       <div
         style={styles.cardBack}
@@ -48,6 +49,9 @@ export const BaseCard: React.FC<BaseCardProps> = ({
         onTouchEnd={handleTouchEnd}
         title="ダブルクリックでカードを開く"
       >
+        {card.isKeyPoint && (
+          <span style={styles.keyPointStar} title="重要拠点">★</span>
+        )}
         <span style={styles.cardBackText}>秘密基地<br />カード</span>
       </div>
     );
@@ -95,6 +99,17 @@ const styles: { [key: string]: React.CSSProperties } = {
     backgroundColor: '#1a1a3a',
     border: '2px solid #333',
     userSelect: 'none',
+    position: 'relative',
+  },
+  keyPointStar: {
+    position: 'absolute',
+    top: '2px',
+    right: '4px',
+    fontSize: '12px',
+    color: '#ff3030',
+    lineHeight: 1,
+    textShadow: '0 0 2px rgba(0,0,0,0.8)',
+    pointerEvents: 'none',
   },
   cardBackText: {
     fontSize: '8px',
@@ -128,11 +143,15 @@ const styles: { [key: string]: React.CSSProperties } = {
   cardContent: {
     padding: '4px',
     textAlign: 'center',
+    // 折り返し時の行間はコンテナの行ボックス（font-size × line-height）で決まるため、
+    // 文字サイズに合わせて小さく指定する（既定の16px継承を防ぐ）
+    fontSize: '8px',
+    lineHeight: 1.1,
   },
   cardTitle: {
     fontSize: '8px',
     color: '#aac4ff',
-    lineHeight: 1.3,
+    lineHeight: 1.1,
     wordBreak: 'break-all',
   },
   keyPointTitle: {

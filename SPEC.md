@@ -103,6 +103,7 @@ locke_board/
             ├── BaseBoard.tsx      秘密基地編ゲームボード（6×6）
             ├── BaseCard.tsx       秘密基地カード
             ├── DealtCardModal.tsx 配布された能力カードのポップアップ（共通利用）
+            ├── DicePanel.tsx      ダイス（2個）パネル（惑星編・秘密基地編で共通利用）
             └── PlayerPiece.tsx    プレイヤーコマ
 ```
 
@@ -167,6 +168,16 @@ type GamePhase = 'LOBBY' | 'FACTION_SETUP' | 'AMBUSH_SETUP' | 'PLAYING' | 'BASE_
 | `isSpaceport` | `boolean` | 宇宙港マスフラグ（惑星編で `col === 0` のとき `true`。秘密基地編は常に `false`） |
 | `card` | `CardData \| null` | 配置されたカード（惑星編の宇宙港は `null`） |
 
+### DiceState
+
+サイコロ2個の状態。サーバーが生成し全クライアントへ同期する**公開情報**（フィルタリング対象外）。
+
+| フィールド | 型 | 説明 |
+|---|---|---|
+| `values` | `[number, number]` | 各サイコロの目（1〜6） |
+| `rolledByName` | `string \| null` | 最後にロールしたプレイヤー名 |
+| `rollId` | `number` | ロールごとに増えるカウンタ（クライアントのアニメーション検知用） |
+
 ### GameState（クライアント送信用）
 
 | フィールド | 型 | 説明 |
@@ -177,6 +188,7 @@ type GamePhase = 'LOBBY' | 'FACTION_SETUP' | 'AMBUSH_SETUP' | 'PLAYING' | 'BASE_
 | `baseBoard` | `Cell[][] \| null` | 秘密基地編ボード（6行×6列。秘密基地編に入るまで `null`） |
 | `myId` | `string` | 受信クライアントの安定プレイヤーID（`Player.id`） |
 | `myDealtCard` | `{ name: string; content: string } \| null \| undefined` | 自分に配布された能力カード（evilのみ。good は `null`） |
+| `dice` | `DiceState` | ダイスの状態（全員共有） |
 
 > 旧仕様にあった `myFaction` / `ambushSetCount` は廃止。陣営は `players[].faction`、待ち伏せ設定数は `board` の `isAmbush` 集計から導出する。
 
@@ -190,6 +202,7 @@ type GamePhase = 'LOBBY' | 'FACTION_SETUP' | 'AMBUSH_SETUP' | 'PLAYING' | 'BASE_
 | `ambushPositions` | `Array<{ row: number; col: number }>` | 待ち伏せ座標（内部管理のみ） |
 | `baseBoard` | `Cell[][] \| null` | 秘密基地編ボード |
 | `keyPointPositions` | `Array<{ row: number; col: number }>` | 重要拠点座標（内部管理のみ） |
+| `dice` | `DiceState` | ダイスの状態（全員共有） |
 
 ---
 
@@ -256,6 +269,7 @@ LOBBY → FACTION_SETUP → AMBUSH_SETUP → PLAYING → BASE_SETUP → BASE_PLA
 - 表向きカードのクリック／シングルタップで**右側の詳細パネル**に内容を表示する（裏カードをめくると自動で開く）
 - **カード破壊**: 表向きカードを右クリック（モバイルは2本指タッチ）でコンテキストメニューを開き「破壊」「元に戻す」を選べる
 - 配布された能力カードは、プレイヤー一覧の自分の名前（🎴付き）クリックで再表示できる
+- **ダイス**: 詳細パネル上部のダイスパネルで「ダイスロール」可能。サーバーが2個（1〜6）を生成して全員へ同期し、回転演出後に確定する（最後のロール者も全員で共有）
 - ホストはいつでもリスタート／ゲーム終了／秘密基地編へ移行が可能
 
 **除外ゾーン**
@@ -282,6 +296,7 @@ LOBBY → FACTION_SETUP → AMBUSH_SETUP → PLAYING → BASE_SETUP → BASE_PLA
 - **カード破壊**: 右クリック / 2本指タッチのコンテキストメニューから破壊・復元
 - 重要拠点カードは evil には常に公開、good にはカードが表になった時のみ公開
 - 配布された能力カードは、プレイヤー一覧の自分の名前クリックで再表示できる
+- **ダイス**: 詳細パネル上部のダイスパネルで「ダイスロール」可能（PLAYING と同じ全員共有の仕様）
 - 除外ゾーンは PLAYING と同仕様
 - ホストはいつでもリスタート／ゲーム終了が可能
 
@@ -307,6 +322,7 @@ LOBBY → FACTION_SETUP → AMBUSH_SETUP → PLAYING → BASE_SETUP → BASE_PLA
 | `card:flip` | `{ row: number; col: number }` | 惑星編カードの表裏切り替え | 全員 |
 | `card:destroy` | `{ row: number; col: number }` | 惑星編カードを破壊 | 全員 |
 | `card:restore` | `{ row: number; col: number }` | 惑星編カードの破壊解除 | 全員 |
+| `dice:roll` | なし | ダイス2個を振る（サーバーが目を生成し全員へ同期） | 全員（参加済み） |
 | `game:restart` | なし | ゲームリスタート（プレイヤー維持） | ホストのみ |
 | `game:end` | なし | ゲーム終了（全リセット） | ホストのみ |
 | `game:startBase` | なし | 秘密基地編へ移行（PLAYING からのみ） | ホストのみ |
@@ -373,6 +389,11 @@ FACTION_SETUP → AMBUSH_SETUP 移行時に呼び出す。
 
 - `restartGame`: LOBBY に戻しボードをリセット。切断中プレイヤーを削除、残りの `faction` / `position` / `dealtCard` をリセット
 - `endGame`: LOBBY に戻し全プレイヤーを削除、全状態をリセット
+- いずれも `state.dice` を初期状態（`rollId: 0`）にリセットする
+
+#### rollDice(state, playerName)
+
+ダイス2個（各1〜6）を生成して `state.dice` を更新する（`rolledByName` に操作者名、`rollId` を加算）。ダイスは全員共有の公開情報。
 
 #### createFilteredGameState(state, socketId)
 
@@ -382,6 +403,7 @@ FACTION_SETUP → AMBUSH_SETUP 移行時に呼び出す。
 - **待ち伏せ（惑星編）**: `isAmbush` / `ambushLabel` は evil または当該カードが表向きのときのみ公開
 - **重要拠点（秘密基地編）**: `isKeyPoint` / `keyPointLabel` は evil または表向きのときのみ公開。公開時は送信用カードの `name` を `keyPointLabel`、`content` を `KEY_POINT_DESCRIPTIONS` に差し替える
 - **配布カード**: `players` 配列から各プレイヤーの `dealtCard` を除外し、受信者本人の分のみ `myDealtCard` として付与
+- **ダイス**: `state.dice` はフィルタせず全員へそのまま送信（公開情報）
 
 ### socketHandlers.ts
 
@@ -398,6 +420,7 @@ FACTION_SETUP → AMBUSH_SETUP 移行時に呼び出す。
 | `ambush:set` / `ambush:done` | evil 限定・AMBUSH_SETUP・0〜2箇所/重複チェック・確定は2箇所必須 |
 | `piece:move` | 行0〜5・列0〜6、または `{-1,-1}`（除外ゾーン） |
 | `card:flip` / `card:destroy` / `card:restore` | PLAYING・行0〜5・列1〜6（宇宙港不可） |
+| `dice:roll` | 参加済みプレイヤーのみ（`rollDice` を実行して全員へ同期） |
 | `game:startBase` | ホスト限定・PLAYING のみ |
 | `keyPoint:set` / `keyPoint:done` | evil 限定・BASE_SETUP・内側16マス（row/col 1〜4）・重複チェック・確定は4箇所必須 |
 | `baseCard:flip` / `baseCard:destroy` / `baseCard:restore` | BASE_PLAYING・行0〜5・列0〜5 |
@@ -442,7 +465,7 @@ FACTION_SETUP → AMBUSH_SETUP 移行時に呼び出す。
 #### 公開関数
 
 各 Socket.io イベントに対応した送信関数を公開する。
-`joinGame` / `leaveGame` / `approvePlayer` / `assignFaction` / `factionDone` / `setAmbush` / `ambushDone` / `movePiece` / `flipCard` / `destroyCard` / `restoreCard` / `restartGame` / `endGame` / `startBase` / `setKeyPoints` / `keyPointsDone` / `flipBaseCard` / `destroyBaseCard` / `restoreBaseCard` / `clearError`
+`joinGame` / `leaveGame` / `approvePlayer` / `assignFaction` / `factionDone` / `setAmbush` / `ambushDone` / `movePiece` / `flipCard` / `destroyCard` / `restoreCard` / `rollDice` / `restartGame` / `endGame` / `startBase` / `setKeyPoints` / `keyPointsDone` / `flipBaseCard` / `destroyBaseCard` / `restoreBaseCard` / `clearError`
 
 ### useTouchTap / useTouchDrag フック
 
@@ -468,6 +491,7 @@ FACTION_SETUP → AMBUSH_SETUP 移行時に呼び出す。
 | BaseBoard.tsx | 秘密基地編6×6ボード。Board.tsx と同等の操作。重要拠点表示 |
 | BaseCard.tsx | 秘密基地カード。evil の裏面に重要拠点★を表示 |
 | DealtCardModal.tsx | 配布能力カードのポップアップ（AmbushSetup / Board / BaseBoard で共通利用） |
+| DicePanel.tsx | ダイス2個・ロールボタン・最後のロール者を表示。`rollId` 増加を検知し回転演出（Board / BaseBoard の詳細パネル上に表示） |
 | CardDetail.tsx | カード詳細ポップアップ（**現在未使用**。詳細表示は各ボードの右側パネルに統合済み） |
 | PlayerPiece.tsx | 円形コマ（プレイヤーカラー、頭文字、タッチドラッグ対応） |
 

@@ -58,12 +58,14 @@ export const Board: React.FC<BoardProps> = ({
   // ドラッグ中のプレイヤーID（マウス）
   const [draggingPlayerId, setDraggingPlayerId] = useState<string | null>(null);
 
-  // コンテキストメニューを外クリックで閉じる
+  // コンテキストメニューを外側のクリック/タップで閉じる
+  // pointerdown を使うことで、カードの touchend が preventDefault で合成クリックを
+  // 抑止していてもタッチで確実に閉じられる（マウス・タッチ両対応）
   useEffect(() => {
     if (!contextMenu) return;
-    const handleClick = () => setContextMenu(null);
-    document.addEventListener('click', handleClick);
-    return () => document.removeEventListener('click', handleClick);
+    const handlePointerDown = () => setContextMenu(null);
+    document.addEventListener('pointerdown', handlePointerDown);
+    return () => document.removeEventListener('pointerdown', handlePointerDown);
   }, [contextMenu]);
 
   // タッチドラッグ操作（ドラッグオーバー状態の管理も含む）
@@ -453,6 +455,7 @@ export const Board: React.FC<BoardProps> = ({
             top: contextMenu.y,
             left: contextMenu.x,
           }}
+          onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}
         >
           {contextMenu.isDestroyed ? (
@@ -586,12 +589,14 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   boardArea: {
     display: 'flex',
+    flexWrap: 'wrap', // 狭い画面では詳細パネルを盤面の下へ折り返す
     gap: '12px',
     alignItems: 'flex-start',
     marginBottom: '16px',
   },
   board: {
-    flex: '1 1 0',
+    // 広い画面では余白をほぼ盤面が占有（grow 999）、狭い画面では基準320pxで折り返す
+    flex: '999 1 320px',
     minWidth: 0,
     backgroundColor: '#0d1a2e',
     border: '2px solid #2a3a5a',
@@ -599,8 +604,8 @@ const styles: { [key: string]: React.CSSProperties } = {
     overflow: 'hidden',
   },
   detailPanel: {
-    width: '200px',
-    flexShrink: 0,
+    // 広い画面では約200px、折り返し時は全幅まで広がる
+    flex: '1 1 200px',
     backgroundColor: '#111827',
     border: '1px solid #2a3a5a',
     borderRadius: '8px',

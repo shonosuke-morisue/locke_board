@@ -121,6 +121,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     borderRadius: '4px',
     position: 'relative',
     userSelect: 'none',
+    touchAction: 'manipulation', // ダブルタップズームを抑止しフリップと競合させない
     transition: 'transform 0.1s',
   },
   faceDown: {
@@ -154,6 +155,9 @@ const styles: { [key: string]: React.CSSProperties } = {
     lineHeight: 1.5,
     fontWeight: 'bold',
     letterSpacing: '0.05em',
+    // セル幅を超えないように制限し、収まらない場合は単語内でも折り返す
+    maxWidth: '100%',
+    overflowWrap: 'anywhere',
   },
   ambushBadge: {
     position: 'absolute',

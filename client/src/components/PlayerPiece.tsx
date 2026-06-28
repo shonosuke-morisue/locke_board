@@ -51,6 +51,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     alignItems: 'center',
     justifyContent: 'center',
     userSelect: 'none',
+    touchAction: 'none', // タッチドラッグ中のページパン/スクロールを抑止
     flexShrink: 0,
     boxShadow: '0 2px 6px rgba(0,0,0,0.5)',
     transition: 'transform 0.1s',

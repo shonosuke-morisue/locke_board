@@ -99,6 +99,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     backgroundColor: '#1a1a3a',
     border: '2px solid #333',
     userSelect: 'none',
+    touchAction: 'manipulation', // ダブルタップズームを抑止
     position: 'relative',
   },
   keyPointStar: {
@@ -130,6 +131,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     backgroundColor: '#2a3a5a',
     border: '2px solid #4a6a9a',
     userSelect: 'none',
+    touchAction: 'manipulation', // ダブルタップズームを抑止
     position: 'relative',
   },
   keyPointFront: {

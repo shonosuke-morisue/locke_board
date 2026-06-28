@@ -95,25 +95,21 @@ export const FactionSetup: React.FC<FactionSetupProps> = ({
                 </button>
               </div>
             ) : (
-              /* 非ホストには陣営を表示（自分の陣営のみ） */
+              /* 非ホストにも全員の陣営を表示（陣営は公開情報） */
               <div style={styles.factionDisplay}>
-                {player.id === gameState.myId ? (
-                  player.faction ? (
-                    <span
-                      style={{
-                        ...styles.factionBadge,
-                        ...(player.faction === 'good'
-                          ? styles.lawBadge
-                          : styles.evilBadge),
-                      }}
-                    >
-                      {player.faction === 'good' ? '秩序（Good）' : '混沌（Evil）'}
-                    </span>
-                  ) : (
-                    <span style={styles.unassigned}>未割り当て</span>
-                  )
+                {player.faction ? (
+                  <span
+                    style={{
+                      ...styles.factionBadge,
+                      ...(player.faction === 'good'
+                        ? styles.lawBadge
+                        : styles.evilBadge),
+                    }}
+                  >
+                    {player.faction === 'good' ? '秩序（Good）' : '混沌（Evil）'}
+                  </span>
                 ) : (
-                  <span style={styles.hidden}>???</span>
+                  <span style={styles.unassigned}>未割り当て</span>
                 )}
               </div>
             )}
@@ -291,11 +287,6 @@ const styles: { [key: string]: React.CSSProperties } = {
   unassigned: {
     color: '#555',
     fontSize: '13px',
-  },
-  hidden: {
-    color: '#444',
-    fontSize: '18px',
-    letterSpacing: '4px',
   },
   doneSection: {
     textAlign: 'center',

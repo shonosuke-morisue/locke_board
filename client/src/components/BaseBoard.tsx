@@ -58,6 +58,7 @@ export const BaseBoard: React.FC<BaseBoardProps> = ({
   const {
     dragOverCell,
     dragOverEliminated,
+    touchDraggingPlayerId,
     setDragOverCell,
     setDragOverEliminated,
     handleTouchDragStart,
@@ -117,7 +118,13 @@ export const BaseBoard: React.FC<BaseBoardProps> = ({
     (row: number, col: number) => {
       const card = gameState.baseBoard?.[row]?.[col]?.card;
       if (card && !card.isFaceUp) {
+        // 裏 → 表: 詳細パネルを開く
         setDetailPos({ row, col });
+      } else {
+        // 表 → 裏: このマスを表示中なら詳細を閉じる（伏せたカードを指し続けないように）
+        setDetailPos((prev) =>
+          prev && prev.row === row && prev.col === col ? null : prev
+        );
       }
       onFlipBaseCard(row, col);
     },
@@ -134,7 +141,12 @@ export const BaseBoard: React.FC<BaseBoardProps> = ({
     (row: number, col: number, x: number, y: number) => {
       const card = gameState.baseBoard?.[row]?.[col]?.card;
       if (!card) return;
-      setContextMenu({ x, y, row, col, isDestroyed: card.isDestroyed });
+      // 画面端でメニューがはみ出さないよう座標をクランプ（メニュー実寸の概算）
+      const MENU_W = 140;
+      const MENU_H = 48;
+      const cx = Math.max(4, Math.min(x, window.innerWidth - MENU_W));
+      const cy = Math.max(4, Math.min(y, window.innerHeight - MENU_H));
+      setContextMenu({ x: cx, y: cy, row, col, isDestroyed: card.isDestroyed });
     },
     [gameState.baseBoard]
   );
@@ -293,6 +305,7 @@ export const BaseBoard: React.FC<BaseBoardProps> = ({
                             isMyPiece={player.id === gameState.myId}
                             onDragStart={handleDragStart}
                             onTouchDragStart={handleTouchDragStart}
+                            isTouchDragging={player.id === touchDraggingPlayerId}
                           />
                         ))}
                       </div>
@@ -327,6 +340,24 @@ export const BaseBoard: React.FC<BaseBoardProps> = ({
                 )}
               </div>
               <div style={styles.detailId}>ID: {detailCard.id}</div>
+              {/* 破壊/復元（右クリック/2本指メニューの代替。クリックで操作でき発見性が高い） */}
+              {detailPos && (
+                detailCard.isDestroyed ? (
+                  <button
+                    style={styles.detailActionButton}
+                    onClick={() => onRestoreBaseCard(detailPos.row, detailPos.col)}
+                  >
+                    元に戻す
+                  </button>
+                ) : (
+                  <button
+                    style={{ ...styles.detailActionButton, ...styles.detailActionButtonDestroy }}
+                    onClick={() => onDestroyBaseCard(detailPos.row, detailPos.col)}
+                  >
+                    破壊
+                  </button>
+                )
+              )}
               <button style={styles.detailCloseButton} onClick={() => setDetailPos(null)}>
                 閉じる
               </button>
@@ -372,6 +403,7 @@ export const BaseBoard: React.FC<BaseBoardProps> = ({
               isMyPiece={player.id === gameState.myId}
               onDragStart={handleDragStart}
               onTouchDragStart={handleTouchDragStart}
+              isTouchDragging={player.id === touchDraggingPlayerId}
             />
           ))}
         </div>
@@ -647,7 +679,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   detailId: {
     fontSize: '10px',
-    color: '#3a3a3a',
+    color: '#6b7280',
   },
   detailCloseButton: {
     backgroundColor: '#2a3a5a',
@@ -657,9 +689,22 @@ const styles: { [key: string]: React.CSSProperties } = {
     borderRadius: '4px',
     width: '100%',
   },
+  detailActionButton: {
+    backgroundColor: '#2a3a5a',
+    color: '#cdd6e6',
+    fontSize: '12px',
+    padding: '6px',
+    borderRadius: '4px',
+    width: '100%',
+    cursor: 'pointer',
+  },
+  detailActionButtonDestroy: {
+    backgroundColor: '#4a1a1a',
+    color: '#ff8080',
+  },
   detailPlaceholder: {
     fontSize: '12px',
-    color: '#444',
+    color: '#8a93a6',
     textAlign: 'center' as const,
     lineHeight: 1.6,
     margin: 0,

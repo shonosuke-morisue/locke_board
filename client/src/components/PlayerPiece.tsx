@@ -10,6 +10,8 @@ interface PlayerPieceProps {
   onDragStart: (e: React.DragEvent, playerId: string) => void;
   // タッチドラッグ開始コールバック（iPad等のタッチデバイス用）
   onTouchDragStart?: (playerId: string) => void;
+  // タッチドラッグ中かどうか（視覚フィードバック用）
+  isTouchDragging?: boolean;
 }
 
 export const PlayerPiece: React.FC<PlayerPieceProps> = ({
@@ -17,6 +19,7 @@ export const PlayerPiece: React.FC<PlayerPieceProps> = ({
   isMyPiece,
   onDragStart,
   onTouchDragStart,
+  isTouchDragging,
 }) => {
   return (
     <div
@@ -30,6 +33,8 @@ export const PlayerPiece: React.FC<PlayerPieceProps> = ({
           ? '2px solid #fff'
           : '2px solid rgba(255,255,255,0.3)',
         cursor: 'grab',
+        // タッチドラッグ中は半透明＋拡大で「掴んでいる」フィードバックを出す
+        ...(isTouchDragging ? { opacity: 0.5, transform: 'scale(1.15)' } : {}),
       }}
       title={`${player.name}${isMyPiece ? ' (あなた)' : ''}`}
     >

@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>超人ロック ボードゲーム ― プレイヤー操作マニュアル</title>
+<style>
+  :root {
+    --bg: #0a0a1a;
+    --panel: #12122a;
+    --panel2: #1a1a2e;
+    --border: #2a3a5a;
+    --accent: #7b68ee;
+    --good: #6ea8fe;
+    --evil: #fe6e6e;
+    --gold: #c8960a;
+    --text: #e0e0e0;
+    --muted: #8a93a6;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", Meiryo, sans-serif;
+    line-height: 1.8;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 0 20px 80px; }
+
+  header.hero {
+    text-align: center;
+    padding: 56px 20px 40px;
+    background: radial-gradient(ellipse at top, #1b1b3a 0%, var(--bg) 70%);
+    border-bottom: 1px solid var(--border);
+  }
+  header.hero h1 {
+    font-size: 2.1rem;
+    margin: 0 0 8px;
+    color: var(--accent);
+    text-shadow: 0 0 24px rgba(123,104,238,.5);
+  }
+  header.hero p { margin: 0; color: var(--muted); }
+
+  nav.toc {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin: 32px 0;
+  }
+  nav.toc h2 { margin: 0 0 12px; font-size: 1.05rem; color: var(--accent); }
+  nav.toc ol { margin: 0; padding-left: 22px; columns: 2; column-gap: 32px; }
+  nav.toc li { margin: 4px 0; break-inside: avoid; }
+  nav.toc a { color: var(--text); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); text-decoration: underline; }
+
+  section { margin: 48px 0; scroll-margin-top: 20px; }
+  h2.sec {
+    font-size: 1.5rem;
+    color: var(--accent);
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 10px;
+    margin-bottom: 8px;
+  }
+  h2.sec .num {
+    display: inline-block;
+    background: var(--accent);
+    color: #fff;
+    width: 30px; height: 30px;
+    line-height: 30px;
+    text-align: center;
+    border-radius: 50%;
+    font-size: 1rem;
+    margin-right: 10px;
+  }
+  h3 { color: #aac4ff; margin-top: 28px; }
+
+  figure {
+    margin: 20px 0;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+  }
+  figure img {
+    width: 100%;
+    display: block;
+    border-radius: 6px;
+    border: 1px solid #000;
+  }
+  figcaption {
+    margin-top: 10px;
+    color: var(--muted);
+    font-size: .85rem;
+    text-align: center;
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: .8rem;
+    font-weight: bold;
+    vertical-align: middle;
+  }
+  .badge.good { background: #1a3a6e; color: var(--good); }
+  .badge.evil { background: #6e1a1a; color: var(--evil); }
+  .badge.host { background: var(--accent); color: #fff; }
+
+  .callout {
+    border-left: 4px solid var(--accent);
+    background: var(--panel);
+    border-radius: 0 8px 8px 0;
+    padding: 12px 18px;
+    margin: 18px 0;
+  }
+  .callout.good { border-left-color: var(--good); }
+  .callout.evil { border-left-color: var(--evil); }
+  .callout.tip { border-left-color: #2ecc71; }
+  .callout strong { color: #fff; }
+
+  ul.clean { padding-left: 22px; }
+  ul.clean li { margin: 6px 0; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 18px 0;
+    background: var(--panel);
+    border-radius: 10px;
+    overflow: hidden;
+    font-size: .95rem;
+  }
+  th, td { padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--border); }
+  th { background: var(--panel2); color: #aac4ff; }
+  tr:last-child td { border-bottom: none; }
+  code {
+    background: #000;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: .9em;
+    color: #ffd700;
+  }
+
+  .flow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    justify-content: center;
+    margin: 24px 0;
+  }
+  .flow .step {
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: .9rem;
+    white-space: nowrap;
+  }
+  .flow .arrow { color: var(--accent); font-weight: bold; }
+
+  footer {
+    text-align: center;
+    color: var(--muted);
+    font-size: .85rem;
+    border-top: 1px solid var(--border);
+    padding-top: 24px;
+    margin-top: 64px;
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <h1>超人ロック ボードゲーム</h1>
+  <p>プレイヤー操作マニュアル</p>
+</header>
+
+<div class="wrap">
+
+  <nav class="toc">
+    <h2>目次</h2>
+    <ol>
+      <li><a href="#intro">ゲーム概要</a></li>
+      <li><a href="#flow">ゲームの流れ</a></li>
+      <li><a href="#lobby">ロビー（参加・承認）</a></li>
+      <li><a href="#faction">陣営割り当て</a></li>
+      <li><a href="#ambush">待ち伏せ設定</a></li>
+      <li><a href="#playing">惑星編（第1部）</a></li>
+      <li><a href="#basesetup">重要拠点設定</a></li>
+      <li><a href="#baseplaying">秘密基地編（第2部）</a></li>
+      <li><a href="#cheatsheet">操作早見表</a></li>
+      <li><a href="#trouble">困ったときは</a></li>
+    </ol>
+  </nav>
+
+  <!-- 1. 概要 -->
+  <section id="intro">
+    <h2 class="sec"><span class="num">1</span>ゲーム概要</h2>
+    <p>
+      「超人ロック」をテーマにした<strong>非対称対戦ボードゲーム</strong>のオンライン版です。
+      プレイヤーは <span class="badge good">秩序（Good）</span> と <span class="badge evil">混沌（Evil）</span> の
+      2つの陣営に分かれ、リアルタイムで対戦します。
+    </p>
+    <ul class="clean">
+      <li><strong>人数</strong>：2〜10人</li>
+      <li><strong>構成</strong>：<strong>第1部「惑星編」</strong>（6×7ボード）→ <strong>第2部「秘密基地編」</strong>（6×6ボード）の2部構成</li>
+      <li><strong>進行役</strong>：最初に参加した人が<span class="badge host">ホスト</span>になり、フェーズの進行・リスタート・終了を操作します</li>
+      <li><strong>端末</strong>：PC・スマホ・タブレットのブラウザで動作（同じ画面をマウスでもタッチでも操作可能）</li>
+      <li><strong>同期</strong>：カード操作・コマ移動・ダイスはすべて全員の画面に即座に反映されます</li>
+    </ul>
+    <div class="callout tip">
+      <strong>陣営は全員に公開されます。</strong>「誰が Good で誰が Evil か」は秘密ではありません。
+      秘密になるのは <em>待ち伏せの位置</em>・<em>能力カードの中身</em>・<em>重要拠点</em>・<em>各 Evil に配られた能力カード</em> です。
+    </div>
+  </section>
+
+  <!-- 2. 流れ -->
+  <section id="flow">
+    <h2 class="sec"><span class="num">2</span>ゲームの流れ</h2>
+    <p>ゲームは次の順に進みます。各フェーズへの移行はホスト（または Evil プレイヤー）が操作します。</p>
+    <div class="flow">
+      <span class="step">① ロビー</span><span class="arrow">→</span>
+      <span class="step">② 陣営割り当て</span><span class="arrow">→</span>
+      <span class="step">③ 待ち伏せ設定</span><span class="arrow">→</span>
+      <span class="step">④ 惑星編</span><span class="arrow">→</span>
+      <span class="step">⑤ 重要拠点設定</span><span class="arrow">→</span>
+      <span class="step">⑥ 秘密基地編</span>
+    </div>
+    <p style="color:var(--muted);font-size:.9rem;text-align:center;">
+      ※ ホストはどのフェーズからでも「リスタート」（プレイヤーを維持してロビーへ）／「ゲーム終了」（全リセット）が行えます。
+    </p>
+  </section>
+
+  <!-- 3. ロビー -->
+  <section id="lobby">
+    <h2 class="sec"><span class="num">3</span>ロビー（参加・承認）</h2>
+    <p>ブラウザでゲームのURLを開き、<strong>プレイヤー名を入力して「参加」</strong>を押します。</p>
+    <figure>
+      <img src="images/01-lobby.png" alt="ロビー画面">
+      <figcaption>ロビー画面（ホスト視点）。申請中のプレイヤーを「承認」して参加させる。</figcaption>
+    </figure>
+    <ul class="clean">
+      <li>最初に参加した人が自動的に<span class="badge host">ホスト</span>になります。</li>
+      <li>後から参加した人は「参加申請中」となり、<strong>ホストが「承認」</strong>を押すと参加できます。</li>
+      <li>承認済みプレイヤーが<strong>2人以上</strong>になると、ホストの「<strong>陣営割り当てを開始</strong>」ボタンが有効になります。</li>
+      <li>ロビーの間は「参加をキャンセル」／「退出する」で抜けられます（ゲーム開始後は退出できません）。</li>
+    </ul>
+  </section>
+
+  <!-- 4. 陣営割り当て -->
+  <section id="faction">
+    <h2 class="sec"><span class="num">4</span>陣営割り当て</h2>
+    <p><strong>ホストが</strong>各プレイヤーに <span class="badge good">秩序（Good）</span> または <span class="badge evil">混沌（Evil）</span> を割り当てます。</p>
+    <figure>
+      <img src="images/02-faction.png" alt="陣営割り当て画面">
+      <figcaption>ホストが各プレイヤーの陣営ボタンを押して割り当てる。割り当て結果は全員が確認できる。</figcaption>
+    </figure>
+    <ul class="clean">
+      <li>全員に陣営を割り当て、かつ <strong>Evil が1人以上</strong> いると「割り当て完了 → 待ち伏せ設定へ」が押せます。</li>
+      <li>ホスト以外のプレイヤーには「ホストが割り当て中です」と表示され、決定された陣営がそのまま見えます。</li>
+    </ul>
+  </section>
+
+  <!-- 5. 待ち伏せ設定 -->
+  <section id="ambush">
+    <h2 class="sec"><span class="num">5</span>待ち伏せ設定</h2>
+    <p>このフェーズでの操作は陣営によって異なります。</p>
+
+    <h3><span class="badge evil">Evil</span> 能力カードの受け取り</h3>
+    <p>待ち伏せ設定画面に入ると、<strong>自分に配られた能力カード</strong>がポップアップで表示されます（自分だけに見えます）。</p>
+    <figure>
+      <img src="images/03-ambush-dealtcard.png" alt="配布された能力カードのポップアップ">
+      <figcaption>Evil プレイヤーには能力カードが1枚配られる。「閉じる」で閉じられ、後から再表示も可能。</figcaption>
+    </figure>
+
+    <h3><span class="badge evil">Evil</span> 待ち伏せの設定</h3>
+    <p>ボード上の<strong>2マスをクリック（タップ）</strong>して待ち伏せを仕掛けます。</p>
+    <figure>
+      <img src="images/04-ambush-board.png" alt="待ち伏せ設定画面">
+      <figcaption>選んだマスに「待A」「待B」が付く。2箇所選ぶと「設定完了 → ゲーム開始」が押せる。</figcaption>
+    </figure>
+    <ul class="clean">
+      <li>宇宙港のマス（左端の列）には設定できません。</li>
+      <li>同じマスをもう一度押すと解除、「リセット」で全解除できます。</li>
+      <li>複数の Evil がいる場合、設定はリアルタイムで全 Evil に共有されます。</li>
+      <li>「🎴 獲得した能力カードを表示」ボタンで、配られたカードをいつでも見直せます。</li>
+    </ul>
+
+    <h3><span class="badge good">Good</span> 待機</h3>
+    <p>Good プレイヤーには待機画面が表示されます。Evil が待ち伏せを仕掛けている間、内容は見えません。</p>
+    <figure>
+      <img src="images/05-ambush-good-waiting.png" alt="good待機画面">
+      <figcaption>Good 側の画面。Evil の設定が終わるのを待つ。</figcaption>
+    </figure>
+  </section>
+
+  <!-- 6. 惑星編 -->
+  <section id="playing">
+    <h2 class="sec"><span class="num">6</span>惑星編（第1部）</h2>
+    <p>6行×7列のボードでプレイします。<span class="badge good">Good</span> のコマは左端の宇宙港に配置された状態でスタートします。</p>
+    <figure>
+      <img src="images/06-playing-board.png" alt="惑星編ボード">
+      <figcaption>惑星編のボード。左端が宇宙港（🚀）、右側にダイスとカード詳細パネル、下に除外ゾーン。</figcaption>
+    </figure>
+
+    <h3>コマの移動</h3>
+    <ul class="clean">
+      <li><strong>PC</strong>：コマを<strong>ドラッグ&ドロップ</strong>で別のマスへ移動します。</li>
+      <li><strong>スマホ/タブレット</strong>：コマを<strong>長押ししてドラッグ</strong>します。</li>
+      <li>コマを下部の「<strong>除外ゾーン</strong>」へ動かすと、盤上から除外された扱いになります。</li>
+    </ul>
+
+    <h3>カードの操作</h3>
+    <ul class="clean">
+      <li><strong>表裏を返す</strong>：カードを<strong>ダブルクリック／ダブルタップ</strong>します。</li>
+      <li><strong>内容を見る</strong>：表向きのカードを<strong>1回クリック／タップ</strong>すると、右側の詳細パネルに内容が表示されます（裏向きのカードを開くと自動で表示されます）。</li>
+      <li><strong>カードを破壊／元に戻す</strong>：表向きカードを<strong>右クリック（スマホは2本指タップ）</strong>でメニューを出すか、詳細パネルの「破壊」「元に戻す」ボタンを使います。</li>
+    </ul>
+    <figure>
+      <img src="images/07-playing-detail-dice.png" alt="カード詳細とダイス">
+      <figcaption>カードを開くと右パネルに詳細が表示される。上部のダイスパネルで「ダイスロール」も行える。</figcaption>
+    </figure>
+
+    <h3>ダイス</h3>
+    <p>右上の「ダイス」パネルの「<strong>ダイスロール</strong>」ボタンを押すと、サイコロ2個が振られます。</p>
+    <ul class="clean">
+      <li>出目は<strong>サーバーが決めて全員の画面に同期</strong>されます。回転演出のあとに結果が確定します。</li>
+      <li>「最後のロール」に、直前に振った人の名前が表示されます。</li>
+      <li>ダイスは<strong>全員</strong>が振れます。</li>
+    </ul>
+
+    <div class="callout evil">
+      <span class="badge evil">Evil</span> プレイヤー一覧の<strong>自分の名前（🎴付き）をクリック</strong>すると、配られた能力カードをいつでも見直せます。
+    </div>
+
+    <div class="callout">
+      <span class="badge host">ホスト</span> 画面右上のボタンで「<strong>秘密基地編へ</strong>」進む／「リスタート」／「ゲーム終了」が行えます。
+    </div>
+  </section>
+
+  <!-- 7. 重要拠点設定 -->
+  <section id="basesetup">
+    <h2 class="sec"><span class="num">7</span>重要拠点設定</h2>
+    <p>ホストが「秘密基地編へ」を押すと、まず<strong>重要拠点の設定</strong>に移ります。</p>
+
+    <h3><span class="badge evil">Evil</span> 重要拠点の設置</h3>
+    <p>秘密基地ボードの<strong>内側16マス（B2〜E5）</strong>に、4箇所の重要拠点をクリックして設定します。</p>
+    <figure>
+      <img src="images/08-basesetup.png" alt="重要拠点設定画面">
+      <figcaption>設定した順に「エネルギー・ルーム」「コンピューター・ルーム」「研究室」「指令室」の名称が付く。</figcaption>
+    </figure>
+    <ul class="clean">
+      <li>最外周（A行・F行・1列・6列）には設定できません。</li>
+      <li>4箇所すべて設定すると「設定完了 → ゲーム開始」が押せます。</li>
+      <li><span class="badge good">Good</span> プレイヤーには待機画面が表示されます。</li>
+    </ul>
+  </section>
+
+  <!-- 8. 秘密基地編 -->
+  <section id="baseplaying">
+    <h2 class="sec"><span class="num">8</span>秘密基地編（第2部）</h2>
+    <p>6行×6列（行 A〜F、列 1〜6）の秘密基地ボードでプレイします。基本操作は惑星編と同じです。</p>
+    <figure>
+      <img src="images/09-baseplaying-board.png" alt="秘密基地編ボード">
+      <figcaption>秘密基地編のボード。第2部開始時は全員のコマが除外ゾーンにリセットされる。</figcaption>
+    </figure>
+    <ul class="clean">
+      <li>コマの移動・カードの表裏・詳細表示・破壊・ダイスの操作は<strong>惑星編と同じ</strong>です。</li>
+      <li>第2部の開始時、全員のコマは<strong>除外ゾーン</strong>に置かれた状態になります。そこから盤上へ動かして使います。</li>
+      <li><span class="badge evil">Evil</span> には重要拠点のカードに<strong>★マーク</strong>が表示されます。<span class="badge good">Good</span> はそのカードを表にしたときに判明します。</li>
+    </ul>
+    <figure>
+      <img src="images/10-baseplaying-detail-dice.png" alt="秘密基地編のカード詳細とダイス">
+      <figcaption>カードを開くと右側に詳細が表示される。ダイスも惑星編と同様に利用できる。</figcaption>
+    </figure>
+  </section>
+
+  <!-- 9. 操作早見表 -->
+  <section id="cheatsheet">
+    <h2 class="sec"><span class="num">9</span>操作早見表</h2>
+    <table>
+      <thead>
+        <tr><th>やりたいこと</th><th>PC（マウス）</th><th>スマホ／タブレット</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>コマを移動する</td><td>ドラッグ&ドロップ</td><td>長押ししてドラッグ</td></tr>
+        <tr><td>コマを除外する</td><td colspan="2">下部の「除外ゾーン」へ移動</td></tr>
+        <tr><td>カードの内容を見る</td><td>クリック</td><td>タップ</td></tr>
+        <tr><td>カードの表裏を返す</td><td>ダブルクリック</td><td>ダブルタップ</td></tr>
+        <tr><td>カードを破壊／元に戻す</td><td>右クリック → メニュー</td><td>2本指タップ → メニュー</td></tr>
+        <tr><td></td><td colspan="2">または詳細パネルの「破壊」「元に戻す」ボタン</td></tr>
+        <tr><td>ダイスを振る</td><td colspan="2">右上ダイスパネルの「ダイスロール」</td></tr>
+        <tr><td>配られた能力カードを見る<span class="badge evil">Evil</span></td><td colspan="2">プレイヤー一覧の自分の名前（🎴）をクリック</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 10. 困ったとき -->
+  <section id="trouble">
+    <h2 class="sec"><span class="num">10</span>困ったときは</h2>
+    <ul class="clean">
+      <li><strong>画面が固まった／間違えてリロードした</strong>：心配いりません。プレイヤー情報はブラウザに保存されており、<strong>同じURLを開き直すと自動で元のゲームに復帰</strong>します。</li>
+      <li><strong>接続状態の確認</strong>：画面左上の丸印で確認できます（<span style="color:#2ecc71;">緑＝接続中</span> / <span style="color:#e74c3c;">赤＝未接続</span>）。</li>
+      <li><strong>操作した内容が他の人に反映されない</strong>：接続が切れている可能性があります。緑表示になっているか確認し、必要ならページを再読み込みしてください。</li>
+      <li><strong>最初からやり直したい</strong>：ホストが「リスタート」を押すと、参加メンバーはそのままでロビーに戻ります。</li>
+    </ul>
+  </section>
+
+  <footer>
+    超人ロック ボードゲーム ― プレイヤー操作マニュアル
+  </footer>
+
+</div>
+</body>
+</html>

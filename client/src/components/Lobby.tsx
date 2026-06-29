@@ -65,6 +65,18 @@ export const Lobby: React.FC<LobbyProps> = ({
       <h1 style={styles.title}>超人ロック ボードゲーム</h1>
       <p style={styles.subtitle}>リアルタイムマルチプレイヤー</p>
 
+      {/* 操作マニュアルへのリンク（別タブで開く） */}
+      <div style={styles.manualLinkRow}>
+        <a
+          href="/manual/index.html"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={styles.manualLink}
+        >
+          📖 操作マニュアルを見る
+        </a>
+      </div>
+
       {/* 参加フォーム */}
       {!hasJoined && (
         <form onSubmit={handleJoin} style={styles.form}>
@@ -223,7 +235,21 @@ const styles: { [key: string]: React.CSSProperties } = {
   subtitle: {
     textAlign: 'center',
     color: '#888',
+    marginBottom: '20px',
+  },
+  manualLinkRow: {
+    textAlign: 'center',
     marginBottom: '40px',
+  },
+  manualLink: {
+    display: 'inline-block',
+    color: '#7b68ee',
+    fontSize: '14px',
+    textDecoration: 'none',
+    padding: '8px 18px',
+    borderRadius: '20px',
+    border: '1px solid #3a3a5a',
+    backgroundColor: '#1a1a2e',
   },
   form: {
     marginBottom: '32px',

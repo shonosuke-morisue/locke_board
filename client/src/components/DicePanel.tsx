@@ -68,7 +68,7 @@ export const DicePanel: React.FC<DicePanelProps> = ({ dice, onRoll }) => {
     <div style={styles.panel}>
       <div style={styles.title}>ダイス</div>
       <div style={styles.diceRow}>
-        <DiceFace value={displayValues[0]} rolling={rolling} />
+        <DiceFace value={displayValues[0]} rolling={rolling} red />
         <DiceFace value={displayValues[1]} rolling={rolling} />
       </div>
       <button style={styles.rollButton} onClick={onRoll} disabled={rolling}>
@@ -91,13 +91,14 @@ const PIP_LAYOUT: { [value: number]: number[] } = {
   6: [0, 2, 3, 5, 6, 8],
 };
 
-const DiceFace: React.FC<{ value: number; rolling: boolean }> = ({ value, rolling }) => {
+// red: 赤地に白い点のサイコロにする（左側のダイス用）
+const DiceFace: React.FC<{ value: number; rolling: boolean; red?: boolean }> = ({ value, rolling, red }) => {
   const pips = PIP_LAYOUT[value] ?? [];
   return (
-    <div style={{ ...styles.die, ...(rolling ? styles.dieRolling : {}) }}>
+    <div style={{ ...styles.die, ...(red ? styles.dieRed : {}), ...(rolling ? styles.dieRolling : {}) }}>
       {Array.from({ length: 9 }).map((_, i) => (
         <span key={i} style={styles.pipCell}>
-          {pips.includes(i) ? <span style={styles.pip} /> : null}
+          {pips.includes(i) ? <span style={{ ...styles.pip, ...(red ? styles.pipWhite : {}) }} /> : null}
         </span>
       ))}
     </div>
@@ -136,6 +137,9 @@ const styles: { [key: string]: React.CSSProperties } = {
     gridTemplateRows: 'repeat(3, 1fr)',
     padding: '5px',
   },
+  dieRed: {
+    backgroundColor: '#c0392b',
+  },
   dieRolling: {
     animation: 'diceSpin 0.4s linear infinite',
   },
@@ -149,6 +153,9 @@ const styles: { [key: string]: React.CSSProperties } = {
     height: '7px',
     borderRadius: '50%',
     backgroundColor: '#1a1a2e',
+  },
+  pipWhite: {
+    backgroundColor: '#fff',
   },
   rollButton: {
     backgroundColor: '#7b68ee',

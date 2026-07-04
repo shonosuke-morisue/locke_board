@@ -7,6 +7,7 @@ import { Card } from './Card';
 import { PlayerPiece } from './PlayerPiece';
 import { useTouchDrag } from '../hooks/useTouchDrag';
 import { DealtCardModal } from './DealtCardModal';
+import { AcquiredCardsModal } from './AcquiredCardsModal';
 import { DicePanel } from './DicePanel';
 import { PLANET_NAMES } from '../constants';
 
@@ -50,6 +51,10 @@ export const Board: React.FC<BoardProps> = ({
   const [detailPos, setDetailPos] = useState<{ row: number; col: number } | null>(null);
   // 自分の名前クリックで配布カードを表示するかどうか
   const [showDealtCard, setShowDealtCard] = useState(false);
+  // 自分の名前クリックで獲得カード一覧を表示するかどうか（good用）
+  const [showAcquiredCards, setShowAcquiredCards] = useState(false);
+  // 惑星編で自分が開いて獲得した能力カード（goodのみサーバーから届く）
+  const acquiredCards = gameState.myAcquiredCards ?? [];
   // 詳細表示中の実際のカード（gameStateから導出）
   const detailCard = detailPos
     ? (gameState.board[detailPos.row]?.[detailPos.col]?.card ?? null)
@@ -253,15 +258,30 @@ export const Board: React.FC<BoardProps> = ({
             const isMe = player.id === gameState.myId;
             // 自分の名前で、配布カードがある場合はクリックで表示できる
             const canShowCard = isMe && !!gameState.myDealtCard;
+            // goodは惑星編で開いて獲得した能力カードをクリックで表示できる
+            const canShowAcquired = isMe && acquiredCards.length > 0;
             return (
             <div
               key={player.id}
               style={{
                 ...styles.playerBadge,
                 ...(canShowCard ? styles.clickableBadge : {}),
+                ...(canShowAcquired ? styles.clickableBadgeGood : {}),
               }}
-              onClick={canShowCard ? () => setShowDealtCard(true) : undefined}
-              title={canShowCard ? '配布された能力カードを表示' : undefined}
+              onClick={
+                canShowCard
+                  ? () => setShowDealtCard(true)
+                  : canShowAcquired
+                    ? () => setShowAcquiredCards(true)
+                    : undefined
+              }
+              title={
+                canShowCard
+                  ? '配布された能力カードを表示'
+                  : canShowAcquired
+                    ? '獲得した能力カードを表示'
+                    : undefined
+              }
             >
               <span
                 style={{
@@ -274,6 +294,11 @@ export const Board: React.FC<BoardProps> = ({
                 <span style={styles.meLabel}>(あなた)</span>
               )}
               {canShowCard && <span style={styles.cardHint}>🎴</span>}
+              {canShowAcquired && (
+                <span style={styles.cardHint}>
+                  🎴{acquiredCards.length > 1 ? `×${acquiredCards.length}` : ''}
+                </span>
+              )}
               {player.faction && (
                 <span style={{
                   ...styles.factionLabel,
@@ -292,6 +317,14 @@ export const Board: React.FC<BoardProps> = ({
         <DealtCardModal
           card={gameState.myDealtCard}
           onClose={() => setShowDealtCard(false)}
+        />
+      )}
+
+      {/* 獲得した能力カードの一覧ポップアップ（good・自分の名前クリックで表示） */}
+      {showAcquiredCards && acquiredCards.length > 0 && (
+        <AcquiredCardsModal
+          cards={acquiredCards}
+          onClose={() => setShowAcquiredCards(false)}
         />
       )}
 
@@ -399,9 +432,9 @@ export const Board: React.FC<BoardProps> = ({
                   このマスには待ち伏せが仕掛けられていた！
                 </p>
               ) : detailCard.isAbility && !detailCard.name ? (
-                // 他人が開いた能力カード（サーバーがname・contentを隠蔽）
+                // 自分が獲得していない能力カード（サーバーがname・contentを隠蔽）
                 <p style={styles.detailEmpty}>
-                  他のプレイヤーが取得した能力カードです。内容は本人のみ確認できます。
+                  能力カードです。内容は開いて獲得したgoodプレイヤーのみ確認できます。
                 </p>
               ) : detailCard.content ? (
                 <p style={styles.detailText}>{detailCard.content}</p>
@@ -624,6 +657,10 @@ const styles: { [key: string]: React.CSSProperties } = {
   clickableBadge: {
     cursor: 'pointer',
     border: '1px solid #e74c3c',
+  },
+  clickableBadgeGood: {
+    cursor: 'pointer',
+    border: '1px solid #3498db',
   },
   cardHint: {
     fontSize: '12px',

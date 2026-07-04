@@ -26,7 +26,7 @@ export interface CardData {
   isFaceUp: boolean;
   isAmbush: boolean;       // 実際の待ち伏せフラグ（サーバー内部管理用）
   ambushLabel: 'A' | 'B' | null; // 待ち伏せの識別ラベル
-  openedBy: string | null; // カードを開いたプレイヤーのID（能力カードの秘密情報管理用）
+  openedBy: string | null; // カードを開いて獲得したgoodプレイヤーのID（goodのフリップ時のみ記録・能力カードの秘密情報管理用）
   isDestroyed: boolean;    // 破壊状態（秘密基地カード用）
   isKeyPoint: boolean;     // 重要拠点カードかどうか
   keyPointLabel: string | null; // 重要拠点のラベル（エネルギー・ルーム等）
@@ -50,11 +50,12 @@ export interface DiceState {
 // クライアントに送信するゲーム状態
 export interface GameState {
   phase: GamePhase;
-  players: Player[];
+  players: Array<Omit<Player, 'socketId'>>; // サーバー内部のsocketIdは送信しない
   board: Cell[][];        // 6×7（惑星編）
   baseBoard: Cell[][] | null; // 6×6（秘密基地編）
   myId: string;           // 自分の安定したUUID（Player.id）
   myDealtCard?: { name: string; content: string } | null; // 自分に配布された能力カード（evilのみ）
+  myAcquiredCards?: Array<{ name: string; content: string }>; // 惑星編で自分が開いて獲得した能力カード（goodのみ・裏に戻すと外れる）
   dice: DiceState;        // ダイスの状態（全員共有）
 }
 

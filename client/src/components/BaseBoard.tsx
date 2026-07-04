@@ -7,6 +7,7 @@ import { BaseCard } from './BaseCard';
 import { PlayerPiece } from './PlayerPiece';
 import { useTouchDrag } from '../hooks/useTouchDrag';
 import { DealtCardModal } from './DealtCardModal';
+import { AcquiredCardsModal } from './AcquiredCardsModal';
 import { DicePanel } from './DicePanel';
 import { ROW_LABELS } from '../constants';
 
@@ -47,6 +48,10 @@ export const BaseBoard: React.FC<BaseBoardProps> = ({
   const [detailPos, setDetailPos] = useState<{ row: number; col: number } | null>(null);
   // 自分の名前クリックで配布カードを表示するかどうか
   const [showDealtCard, setShowDealtCard] = useState(false);
+  // 自分の名前クリックで獲得カード一覧を表示するかどうか（good用）
+  const [showAcquiredCards, setShowAcquiredCards] = useState(false);
+  // 惑星編で自分が開いて獲得した能力カード（goodのみサーバーから届く）
+  const acquiredCards = gameState.myAcquiredCards ?? [];
   const detailCard = detailPos && gameState.baseBoard
     ? (gameState.baseBoard[detailPos.row]?.[detailPos.col]?.card ?? null)
     : null;
@@ -215,15 +220,30 @@ export const BaseBoard: React.FC<BaseBoardProps> = ({
             const isMe = player.id === gameState.myId;
             // 自分の名前で、配布カードがある場合はクリックで表示できる
             const canShowCard = isMe && !!gameState.myDealtCard;
+            // goodは惑星編で開いて獲得した能力カードをクリックで表示できる
+            const canShowAcquired = isMe && acquiredCards.length > 0;
             return (
             <div
               key={player.id}
               style={{
                 ...styles.playerBadge,
                 ...(canShowCard ? styles.clickableBadge : {}),
+                ...(canShowAcquired ? styles.clickableBadgeGood : {}),
               }}
-              onClick={canShowCard ? () => setShowDealtCard(true) : undefined}
-              title={canShowCard ? '配布された能力カードを表示' : undefined}
+              onClick={
+                canShowCard
+                  ? () => setShowDealtCard(true)
+                  : canShowAcquired
+                    ? () => setShowAcquiredCards(true)
+                    : undefined
+              }
+              title={
+                canShowCard
+                  ? '配布された能力カードを表示'
+                  : canShowAcquired
+                    ? '獲得した能力カードを表示'
+                    : undefined
+              }
             >
               <span style={{ ...styles.colorDot, backgroundColor: player.color }} />
               <span style={styles.playerName}>{player.name}</span>
@@ -231,6 +251,11 @@ export const BaseBoard: React.FC<BaseBoardProps> = ({
                 <span style={styles.meLabel}>(あなた)</span>
               )}
               {canShowCard && <span style={styles.cardHint}>🎴</span>}
+              {canShowAcquired && (
+                <span style={styles.cardHint}>
+                  🎴{acquiredCards.length > 1 ? `×${acquiredCards.length}` : ''}
+                </span>
+              )}
               {player.faction && (
                 <span style={{
                   ...styles.factionLabel,
@@ -249,6 +274,14 @@ export const BaseBoard: React.FC<BaseBoardProps> = ({
         <DealtCardModal
           card={gameState.myDealtCard}
           onClose={() => setShowDealtCard(false)}
+        />
+      )}
+
+      {/* 獲得した能力カードの一覧ポップアップ（good・自分の名前クリックで表示） */}
+      {showAcquiredCards && acquiredCards.length > 0 && (
+        <AcquiredCardsModal
+          cards={acquiredCards}
+          onClose={() => setShowAcquiredCards(false)}
         />
       )}
 
@@ -544,6 +577,10 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   factionLabel: {
     fontSize: '11px',
+  },
+  clickableBadgeGood: {
+    cursor: 'pointer',
+    border: '1px solid #3498db',
   },
   clickableBadge: {
     cursor: 'pointer',

@@ -438,7 +438,10 @@ export function createFilteredGameState(
 
       const card = cell.card;
       // 能力カードの名称・詳細は開いた本人のみ閲覧可能
-      const canSeeAbilityContent = !card.isAbility || card.openedBy === playerId;
+      // （未参加ソケットは playerId が null になり、未開封カードの openedBy === null と
+      //   一致して全開示されてしまうため、null を明示的に除外する）
+      const canSeeAbilityContent =
+        !card.isAbility || (playerId !== null && card.openedBy === playerId);
 
       return {
         ...cell,
@@ -481,11 +484,29 @@ export function createFilteredGameState(
       )
     : null;
 
-  // players から各プレイヤー個人の秘匿情報（配布カード）を除外して送信する
+  // players から各プレイヤー個人の秘匿情報（配布カード）とサーバー内部のsocketIdを除外して送信する
   const filteredPlayers = state.players.map((p) => {
-    const { dealtCard, ...rest } = p;
+    const { dealtCard, socketId, ...rest } = p;
     return rest;
   });
+
+  // goodプレイヤーの獲得カード: 惑星編ボードで自分が開いて表のままの能力カード
+  // （裏に戻されると isFaceUp が false になり自動的にリストから外れる。
+  //   待ち伏せマスは戦闘扱いのため、元が能力カードでも獲得対象にしない）
+  const myAcquiredCards =
+    player?.faction === 'good'
+      ? state.board.flatMap((row) =>
+          row.flatMap((cell) =>
+            cell.card &&
+            cell.card.isAbility &&
+            !cell.card.isAmbush &&
+            cell.card.isFaceUp &&
+            cell.card.openedBy === playerId
+              ? [{ name: cell.card.name, content: cell.card.content }]
+              : []
+          )
+        )
+      : [];
 
   return {
     phase: state.phase,
@@ -494,6 +515,7 @@ export function createFilteredGameState(
     baseBoard: filteredBaseBoard,
     myId: player?.id ?? socketId, // 安定したUUID（Player.id）を返す
     myDealtCard: player?.dealtCard ?? null, // 自分に配布された能力カード（evilのみ）
+    myAcquiredCards, // 惑星編で開いて獲得した能力カード（goodのみ）
     dice: state.dice, // ダイスは公開情報（フィルタなし）
   };
 }

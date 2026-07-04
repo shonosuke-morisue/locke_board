@@ -131,7 +131,7 @@ type GamePhase = 'LOBBY' | 'FACTION_SETUP' | 'AMBUSH_SETUP' | 'PLAYING' | 'BASE_
 | フィールド | 型 | 説明 |
 |---|---|---|
 | `id` | `string` | 安定したUUID（再接続時も変わらない） |
-| `socketId` | `string` | 現在の Socket.id（接続のたびに更新） |
+| `socketId` | `string` | 現在の Socket.id（接続のたびに更新・サーバー内部管理。送信時は `players` から除外） |
 | `name` | `string` | プレイヤー名 |
 | `faction` | `Faction \| undefined` | 陣営（割り当て前は `undefined`） |
 | `isHost` | `boolean` | ホストフラグ |
@@ -154,7 +154,7 @@ type GamePhase = 'LOBBY' | 'FACTION_SETUP' | 'AMBUSH_SETUP' | 'PLAYING' | 'BASE_
 | `isFaceUp` | `boolean` | 表向きフラグ |
 | `isAmbush` | `boolean` | 待ち伏せフラグ（惑星編・サーバー内部管理・フィルタリング対象） |
 | `ambushLabel` | `'A' \| 'B' \| null` | 待ち伏せのラベル（A=1箇所目、B=2箇所目） |
-| `openedBy` | `string \| null` | 最初に表に返したプレイヤーの ID（初回のみ記録） |
+| `openedBy` | `string \| null` | 最後に表に返した **good** プレイヤーの ID（good のフリップ時のみ更新。evil・未参加ソケットのフリップでは変更されない。能力カードの閲覧権と獲得判定に使用） |
 | `isDestroyed` | `boolean` | 破壊状態フラグ |
 | `isKeyPoint` | `boolean` | 重要拠点フラグ（秘密基地編・フィルタリング対象） |
 | `keyPointLabel` | `string \| null` | 重要拠点のラベル（エネルギー・ルーム等） |
@@ -183,11 +183,12 @@ type GamePhase = 'LOBBY' | 'FACTION_SETUP' | 'AMBUSH_SETUP' | 'PLAYING' | 'BASE_
 | フィールド | 型 | 説明 |
 |---|---|---|
 | `phase` | `GamePhase` | 現在のゲームフェーズ |
-| `players` | `Player[]` | 全プレイヤー情報（各プレイヤーの `dealtCard` は除外して送信） |
+| `players` | `Array<Omit<Player, 'socketId'>>` | 全プレイヤー情報（各プレイヤーの `dealtCard` とサーバー内部の `socketId` は除外して送信） |
 | `board` | `Cell[][]` | 惑星編ボード（6行×7列） |
 | `baseBoard` | `Cell[][] \| null` | 秘密基地編ボード（6行×6列。秘密基地編に入るまで `null`） |
 | `myId` | `string` | 受信クライアントの安定プレイヤーID（`Player.id`） |
 | `myDealtCard` | `{ name: string; content: string } \| null \| undefined` | 自分に配布された能力カード（evilのみ。good は `null`） |
+| `myAcquiredCards` | `Array<{ name: string; content: string }> \| undefined` | 惑星編で自分が開いて獲得した能力カード（goodのみ。evil は空配列）。惑星編ボードの「`isAbility` かつ非待ち伏せかつ表向きかつ `openedBy === 自分`」のカードから導出され、裏に戻されると自動的に外れる |
 | `dice` | `DiceState` | ダイスの状態（全員共有） |
 
 > 旧仕様にあった `myFaction` / `ambushSetCount` は廃止。陣営は `players[].faction`、待ち伏せ設定数は `board` の `isAmbush` 集計から導出する。
@@ -269,6 +270,7 @@ LOBBY → FACTION_SETUP → AMBUSH_SETUP → PLAYING → BASE_SETUP → BASE_PLA
 - 表向きカードのクリック／シングルタップで**右側の詳細パネル**に内容を表示する（裏カードをめくると自動で開く）
 - **カード破壊**: 表向きカードを右クリック（モバイルは2本指タッチ）でコンテキストメニューを開き「破壊」「元に戻す」を選べる
 - 配布された能力カードは、プレイヤー一覧の自分の名前（🎴付き）クリックで再表示できる
+- **能力カードの獲得（good）**: good プレイヤーが能力カードを表に返すと、そのカードを獲得する（`openedBy` は **good のフリップ時のみ**更新され、最後に開いた good プレイヤーが獲得者となる。evil のフリップでは変更されないため、evil が閲覧権・獲得権を奪うことはできない）。**待ち伏せマス（`isAmbush`）は戦闘扱いのため、元のカードが能力カードでも獲得・閲覧の対象にならない**。獲得カードはプレイヤー一覧の自分の名前（🎴付き・複数枚は枚数表示）クリックで一覧表示できる（`AcquiredCardsModal`：カード名リスト＋クリックで説明を排他表示）。カードが裏に戻されると獲得から外れる
 - **ダイス**: 詳細パネル上部のダイスパネルで「ダイスロール」可能。サーバーが2個（1〜6）を生成して全員へ同期し、回転演出後に確定する（最後のロール者も全員で共有）
 - ホストはいつでもリスタート／ゲーム終了／秘密基地編へ移行が可能
 
@@ -296,6 +298,7 @@ LOBBY → FACTION_SETUP → AMBUSH_SETUP → PLAYING → BASE_SETUP → BASE_PLA
 - **カード破壊**: 右クリック / 2本指タッチのコンテキストメニューから破壊・復元
 - 重要拠点カードは evil には常に公開、good にはカードが表になった時のみ公開
 - 配布された能力カードは、プレイヤー一覧の自分の名前クリックで再表示できる
+- good が惑星編で獲得した能力カード（`myAcquiredCards`）も、自分の名前クリックで一覧表示できる（惑星編ボードは保持されるため獲得状態は引き継がれる）
 - **ダイス**: 詳細パネル上部のダイスパネルで「ダイスロール」可能（PLAYING と同じ全員共有の仕様）
 - 除外ゾーンは PLAYING と同仕様
 - ホストはいつでもリスタート／ゲーム終了が可能
@@ -399,10 +402,11 @@ FACTION_SETUP → AMBUSH_SETUP 移行時に呼び出す。
 
 クライアント向けにゲーム状態をフィルタリングして返す。
 
-- **能力カード**: `isAbility` が真のカードは、`openedBy === 受信者の playerId`（＝本人が開いた）でない限り `name` / `content` を空文字にする
+- **能力カード**: `isAbility` が真のカードは、`openedBy === 受信者の playerId`（＝本人が開いた）でない限り `name` / `content` を空文字にする。受信者が未参加ソケット（`playerId` が null）の場合は、未開封カード（`openedBy === null`）との null 同士の一致で開示されないよう明示的に非公開とする
 - **待ち伏せ（惑星編）**: `isAmbush` / `ambushLabel` は evil または当該カードが表向きのときのみ公開
 - **重要拠点（秘密基地編）**: `isKeyPoint` / `keyPointLabel` は evil または表向きのときのみ公開。公開時は送信用カードの `name` を `keyPointLabel`、`content` を `KEY_POINT_DESCRIPTIONS` に差し替える
 - **配布カード**: `players` 配列から各プレイヤーの `dealtCard` を除外し、受信者本人の分のみ `myDealtCard` として付与
+- **獲得カード**: 受信者が good の場合、惑星編ボードから「`isAbility` かつ非待ち伏せ（`!isAmbush`）かつ表向きかつ `openedBy === 受信者`」のカードを抽出して `myAcquiredCards` として付与（evil は空配列）
 - **ダイス**: `state.dice` はフィルタせず全員へそのまま送信（公開情報）
 
 ### socketHandlers.ts
@@ -431,9 +435,9 @@ FACTION_SETUP → AMBUSH_SETUP 移行時に呼び出す。
 - **good プレイヤーのみ**宇宙港（`col === 0`）に配置する（good 並び順 `index % 6` を `row` に設定）
 - evil プレイヤーには `position` を設定しない
 
-#### card:flip / baseCard:flip の openedBy 記録
+#### card:flip の openedBy 記録
 
-表に返したとき、かつ `card.openedBy === null` の場合のみ `openedBy` に操作プレイヤーIDを記録する（再度裏返して開いても更新しない）。
+表に返したとき、操作プレイヤーが **good かつ待ち伏せマスでない場合のみ** `openedBy` を更新する（最後に開いた good プレイヤーが能力カードの閲覧権と獲得権を持つ）。evil・未参加ソケットのフリップでは `openedBy` を変更しない（＝evil は閲覧権・獲得権を奪えない。evil が裏の能力カードを開いても中身は誰にも公開されない）。待ち伏せマス（`isAmbush`）は戦闘扱いのため、元が能力カードでも `openedBy` を記録しない（中身は誰にも公開されない）。`baseCard:flip` は `openedBy` を記録しない。
 
 ---
 
@@ -485,12 +489,13 @@ FACTION_SETUP → AMBUSH_SETUP 移行時に呼び出す。
 | Lobby.tsx | 参加申請・承認・フェーズ移行（承認済み2人以上で有効） |
 | FactionSetup.tsx | ホストが陣営割り当て。全員割当＆evil1人以上で完了ボタン有効。割り当てられた陣営は全プレイヤーに表示（公開情報） |
 | AmbushSetup.tsx | evil が待ち伏せ2箇所を設定。配布能力カードのポップアップ表示。good は待機画面 |
-| Board.tsx | 惑星編6×7ボード。コマ移動・フリップ・右側詳細パネル・破壊メニュー・プレイヤー一覧（自分の名前クリックで配布カード再表示） |
+| Board.tsx | 惑星編6×7ボード。コマ移動・フリップ・右側詳細パネル・破壊メニュー・プレイヤー一覧（自分の名前クリックで配布カード再表示／good は獲得カード一覧表示） |
 | Card.tsx | 惑星編カード。能力/情報入手/待ち伏せ/破壊で配色を変える。クリック=詳細、ダブル=フリップ、右クリック/2本指=メニュー |
 | BaseSetup.tsx | evil が重要拠点4箇所（内側16マス）を設定。good は待機画面 |
 | BaseBoard.tsx | 秘密基地編6×6ボード。Board.tsx と同等の操作。重要拠点表示 |
 | BaseCard.tsx | 秘密基地カード。evil の裏面に重要拠点★を表示 |
 | DealtCardModal.tsx | 配布能力カードのポップアップ（AmbushSetup / Board / BaseBoard で共通利用） |
+| AcquiredCardsModal.tsx | good が獲得した能力カードの一覧ポップアップ（Board / BaseBoard で共通利用）。カード名リストを表示し、名前クリックで説明を排他表示（同時に1枚のみ） |
 | DicePanel.tsx | ダイス2個・ロールボタン・最後のロール者を表示。`rollId` 増加を検知し回転演出（Board / BaseBoard の詳細パネル上に表示） |
 | CardDetail.tsx | カード詳細ポップアップ（**現在未使用**。詳細表示は各ボードの右側パネルに統合済み） |
 | PlayerPiece.tsx | 円形コマ（プレイヤーカラー、頭文字、タッチドラッグ対応） |
@@ -607,9 +612,10 @@ FACTION_SETUP → AMBUSH_SETUP 移行時に呼び出す。
 | 情報 | good | evil |
 |---|---|---|
 | 待ち伏せマスの位置・`isAmbush` / `ambushLabel` | カードが表になった時のみ公開 | 常に公開 |
-| 能力カードの名称・詳細（開いた本人） | 公開 | 公開 |
-| 能力カードの名称・詳細（他人が開いた／未開封） | `name` / `content` を空文字で送信 | 同左 |
+| 能力カードの名称・詳細（自分が開いて獲得） | 公開 | —（evil のフリップでは `openedBy` が記録されないため該当なし） |
+| 能力カードの名称・詳細（他人が獲得／未獲得） | `name` / `content` を空文字で送信 | 常に空文字で送信 |
 | 配布された能力カード（`myDealtCard`） | 常に `null` | 自分に配布された1枚のみ受信（他evilの分は非公開） |
+| 獲得した能力カード（`myAcquiredCards`） | 自分が開いて表のままの能力カードのみ受信 | 常に空配列 |
 
 ### 秘密基地編
 
@@ -620,8 +626,8 @@ FACTION_SETUP → AMBUSH_SETUP 移行時に呼び出す。
 
 ### 補足
 
-- `openedBy` はカードを**最初に表にしたプレイヤーのID**を記録し、一度設定されたら変更されない
-- `Player.dealtCard` はサーバー内部のみで保持し、`players` 配列からは常に除外して送信する
+- `openedBy` はカードを**最後に表にした good プレイヤーのID**を記録する（good のフリップ時のみ更新。能力カードの名称・詳細の閲覧権と獲得判定はこの値で決まる）
+- `Player.dealtCard` と `Player.socketId` はサーバー内部のみで保持し、`players` 配列からは常に除外して送信する
 - `isDestroyed`（破壊状態）は秘匿対象ではなく全員に公開される
 
 ---

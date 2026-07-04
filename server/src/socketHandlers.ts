@@ -326,10 +326,14 @@ export function setupSocketHandlers(
       }
 
       card.isFaceUp = !card.isFaceUp;
-      // 表に返した時に開いたプレイヤーを記録（初回のみ）
-      if (card.isFaceUp && card.openedBy === null) {
+      // 表に返した時、goodプレイヤーのフリップのみ獲得者として記録する
+      // （evil・未参加ソケットのフリップでは openedBy を変更しない＝閲覧権・獲得権を奪えない。
+      //   待ち伏せマスは戦闘扱いでカードの取得ではないため、元が能力カードでも記録しない）
+      if (card.isFaceUp && !card.isAmbush) {
         const flipPlayer = state.players.find((p) => p.socketId === socket.id);
-        card.openedBy = flipPlayer?.id ?? null;
+        if (flipPlayer?.faction === 'good') {
+          card.openedBy = flipPlayer.id;
+        }
       }
       console.log(`カードフリップ: (${row}, ${col}) → ${card.isFaceUp ? '表' : '裏'}`);
       broadcastGameState(io, state);

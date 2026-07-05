@@ -17,6 +17,7 @@ import {
   setKeyPoints,
   dealAmbushCards,
   rollDice,
+  reshuffleFaceDownCards,
   createFilteredGameState,
 } from './gameState';
 
@@ -499,6 +500,28 @@ export function setupSocketHandlers(
       if (!card) return;
       card.isDestroyed = false;
       console.log(`秘密基地カード復元: (${row}, ${col})`);
+      broadcastGameState(io, state);
+    });
+
+    // 伏せカードのリシャッフル（ホストのみ・PLAYING / BASE_PLAYING）
+    // 裏向きカードの中身のみを再配置する。待ち伏せ・重要拠点の場所は変わらない
+    socket.on('game:reshuffle', () => {
+      const host = state.players.find((p) => p.socketId === socket.id);
+      if (!host?.isHost) {
+        socket.emit('error', { message: 'ホストのみがリシャッフルできます。' });
+        return;
+      }
+
+      if (state.phase === 'PLAYING') {
+        reshuffleFaceDownCards(state.board);
+      } else if (state.phase === 'BASE_PLAYING' && state.baseBoard) {
+        reshuffleFaceDownCards(state.baseBoard);
+      } else {
+        socket.emit('error', { message: 'ゲームプレイフェーズではありません。' });
+        return;
+      }
+
+      console.log(`伏せカードをリシャッフル（${state.phase}）`);
       broadcastGameState(io, state);
     });
 

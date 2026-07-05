@@ -27,6 +27,7 @@ const App: React.FC = () => {
     destroyCard,
     restoreCard,
     rollDice,
+    reshuffleCards,
     restartGame,
     endGame,
     startBase,
@@ -110,6 +111,7 @@ const App: React.FC = () => {
               onDestroyCard={destroyCard}
               onRestoreCard={restoreCard}
               onRollDice={rollDice}
+              onReshuffle={reshuffleCards}
               onRestart={restartGame}
               onEnd={endGame}
               onStartBase={startBase}
@@ -134,6 +136,7 @@ const App: React.FC = () => {
               onDestroyBaseCard={destroyBaseCard}
               onRestoreBaseCard={restoreBaseCard}
               onRollDice={rollDice}
+              onReshuffle={reshuffleCards}
               onRestart={restartGame}
               onEnd={endGame}
             />

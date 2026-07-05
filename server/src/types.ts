@@ -85,6 +85,7 @@ export interface ClientToServerEvents {
   'card:destroy': (data: { row: number; col: number }) => void;
   'card:restore': (data: { row: number; col: number }) => void;
   'dice:roll': () => void;
+  'game:reshuffle': () => void;
   'game:restart': () => void;
   'game:end': () => void;
   'game:startBase': () => void;

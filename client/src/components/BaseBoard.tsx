@@ -18,6 +18,7 @@ interface BaseBoardProps {
   onDestroyBaseCard: (row: number, col: number) => void;
   onRestoreBaseCard: (row: number, col: number) => void;
   onRollDice: () => void;
+  onReshuffle: () => void;
   onRestart: () => void;
   onEnd: () => void;
 }
@@ -38,6 +39,7 @@ export const BaseBoard: React.FC<BaseBoardProps> = ({
   onDestroyBaseCard,
   onRestoreBaseCard,
   onRollDice,
+  onReshuffle,
   onRestart,
   onEnd,
 }) => {
@@ -194,6 +196,16 @@ export const BaseBoard: React.FC<BaseBoardProps> = ({
           )}
           {isHost && (
             <div style={styles.hostButtons}>
+              <button
+                onClick={() => {
+                  if (window.confirm('伏せているカードの中身を再配置します。よろしいですか？')) {
+                    onReshuffle();
+                  }
+                }}
+                style={styles.reshuffleButton}
+              >
+                リシャッフル
+              </button>
               <button onClick={onRestart} style={styles.restartButton}>
                 リスタート
               </button>
@@ -532,6 +544,15 @@ const styles: { [key: string]: React.CSSProperties } = {
   hostButtons: {
     display: 'flex',
     gap: '8px',
+  },
+  reshuffleButton: {
+    backgroundColor: '#0d3a4a',
+    color: '#5ac8e8',
+    fontSize: '13px',
+    padding: '8px 16px',
+    borderRadius: '6px',
+    border: '1px solid #2a7a9a',
+    fontWeight: 'bold',
   },
   restartButton: {
     backgroundColor: '#555',

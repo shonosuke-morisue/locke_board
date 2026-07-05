@@ -382,6 +382,41 @@ export function rollDice(state: ServerGameState, playerName: string): void {
   };
 }
 
+// 伏せているカードの中身だけをシャッフルして再配置する（惑星編・秘密基地編共通）
+// - 対象は「裏向きかつ未破壊」のカードのみ（表向き・破壊済みは動かさない）
+// - マスに紐づく情報（待ち伏せ・重要拠点・id）は動かさない
+// - 再配置後の中身は誰も開いていないため openedBy はリセットする
+export function reshuffleFaceDownCards(board: Cell[][]): void {
+  // 対象カードを収集
+  const targets: CardData[] = [];
+  board.forEach((row) => {
+    row.forEach((cell) => {
+      if (cell.card && !cell.card.isFaceUp && !cell.card.isDestroyed) {
+        targets.push(cell.card);
+      }
+    });
+  });
+
+  // 中身（名称・詳細・能力フラグ）を取り出して Fisher-Yates シャッフル
+  const contents = targets.map((c) => ({
+    name: c.name,
+    content: c.content,
+    isAbility: c.isAbility,
+  }));
+  for (let i = contents.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [contents[i], contents[j]] = [contents[j], contents[i]];
+  }
+
+  // 同じマス群に書き戻す
+  targets.forEach((card, index) => {
+    card.name = contents[index].name;
+    card.content = contents[index].content;
+    card.isAbility = contents[index].isAbility;
+    card.openedBy = null;
+  });
+}
+
 // 秘密基地編に遷移する（BASE_SETUPフェーズ、全プレイヤーを除外ゾーンに移動）
 export function startBase(state: ServerGameState): void {
   state.phase = 'BASE_SETUP';

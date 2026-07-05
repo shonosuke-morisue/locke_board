@@ -272,7 +272,8 @@ LOBBY → FACTION_SETUP → AMBUSH_SETUP → PLAYING → BASE_SETUP → BASE_PLA
 - 配布された能力カードは、プレイヤー一覧の自分の名前（🎴付き）クリックで再表示できる
 - **能力カードの獲得（good）**: good プレイヤーが能力カードを表に返すと、そのカードを獲得する（`openedBy` は **good のフリップ時のみ**更新され、最後に開いた good プレイヤーが獲得者となる。evil のフリップでは変更されないため、evil が閲覧権・獲得権を奪うことはできない）。**待ち伏せマス（`isAmbush`）は戦闘扱いのため、元のカードが能力カードでも獲得・閲覧の対象にならない**。獲得カードはプレイヤー一覧の自分の名前（🎴付き・複数枚は枚数表示）クリックで一覧表示できる（`AcquiredCardsModal`：カード名リスト＋クリックで説明を排他表示）。カードが裏に戻されると獲得から外れる
 - **ダイス**: 詳細パネル上部のダイスパネルで「ダイスロール」可能。サーバーが2個（1〜6）を生成して全員へ同期し、回転演出後に確定する（最後のロール者も全員で共有）
-- ホストはいつでもリスタート／ゲーム終了／秘密基地編へ移行が可能
+- **リシャッフル（ホストのみ）**: 伏せているカード（裏向きかつ未破壊）の中身だけをシャッフルして同じマス群に再配置する。表向き・破壊済みカードと、マスに紐づく待ち伏せの場所は変わらない。再配置されたカードの `openedBy` はリセットされる（伏せカードは獲得対象外のため獲得リストへの影響はない）
+- ホストはいつでもリシャッフル／リスタート／ゲーム終了／秘密基地編へ移行が可能
 
 **除外ゾーン**
 - ボードグリッド下部の独立したドロップエリア
@@ -300,8 +301,9 @@ LOBBY → FACTION_SETUP → AMBUSH_SETUP → PLAYING → BASE_SETUP → BASE_PLA
 - 配布された能力カードは、プレイヤー一覧の自分の名前クリックで再表示できる
 - good が惑星編で獲得した能力カード（`myAcquiredCards`）も、自分の名前クリックで一覧表示できる（惑星編ボードは保持されるため獲得状態は引き継がれる）
 - **ダイス**: 詳細パネル上部のダイスパネルで「ダイスロール」可能（PLAYING と同じ全員共有の仕様）
+- **リシャッフル（ホストのみ）**: 伏せているカード（裏向きかつ未破壊）の中身だけをシャッフルして再配置する。重要拠点の場所（`isKeyPoint` / `keyPointLabel`）はマスに紐づくため変わらない
 - 除外ゾーンは PLAYING と同仕様
-- ホストはいつでもリスタート／ゲーム終了が可能
+- ホストはいつでもリシャッフル／リスタート／ゲーム終了が可能
 
 **リスタート**: プレイヤー情報を保持したまま LOBBY に戻り、ボード・配布カードをリセットする
 **ゲーム終了**: 全プレイヤー情報を削除して LOBBY に戻り、全状態をリセットする
@@ -326,6 +328,7 @@ LOBBY → FACTION_SETUP → AMBUSH_SETUP → PLAYING → BASE_SETUP → BASE_PLA
 | `card:destroy` | `{ row: number; col: number }` | 惑星編カードを破壊 | 全員 |
 | `card:restore` | `{ row: number; col: number }` | 惑星編カードの破壊解除 | 全員 |
 | `dice:roll` | なし | ダイス2個を振る（サーバーが目を生成し全員へ同期） | 全員（参加済み） |
+| `game:reshuffle` | なし | 伏せているカードの中身を再配置（PLAYING は惑星編ボード、BASE_PLAYING は秘密基地ボードが対象） | ホストのみ |
 | `game:restart` | なし | ゲームリスタート（プレイヤー維持） | ホストのみ |
 | `game:end` | なし | ゲーム終了（全リセット） | ホストのみ |
 | `game:startBase` | なし | 秘密基地編へ移行（PLAYING からのみ） | ホストのみ |
@@ -398,6 +401,10 @@ FACTION_SETUP → AMBUSH_SETUP 移行時に呼び出す。
 
 ダイス2個（各1〜6）を生成して `state.dice` を更新する（`rolledByName` に操作者名、`rollId` を加算）。ダイスは全員共有の公開情報。
 
+#### reshuffleFaceDownCards(board)
+
+指定ボード上の「裏向きかつ未破壊」のカードを対象に、中身（`name` / `content` / `isAbility`）だけを Fisher-Yates でシャッフルして同じマス群に書き戻す。マスに紐づく情報（`id` / `isAmbush` / `ambushLabel` / `isKeyPoint` / `keyPointLabel`）と表向き・破壊済みカードは変更しない。再配置後の中身は誰も開いていないため、対象カードの `openedBy` は `null` にリセットする。
+
 #### createFilteredGameState(state, socketId)
 
 クライアント向けにゲーム状態をフィルタリングして返す。
@@ -428,6 +435,7 @@ FACTION_SETUP → AMBUSH_SETUP 移行時に呼び出す。
 | `game:startBase` | ホスト限定・PLAYING のみ |
 | `keyPoint:set` / `keyPoint:done` | evil 限定・BASE_SETUP・内側16マス（row/col 1〜4）・重複チェック・確定は4箇所必須 |
 | `baseCard:flip` / `baseCard:destroy` / `baseCard:restore` | BASE_PLAYING・行0〜5・列0〜5 |
+| `game:reshuffle` | ホスト限定・PLAYING / BASE_PLAYING のみ（`reshuffleFaceDownCards` を実行） |
 | `game:restart` / `game:end` | ホスト限定 |
 
 #### AMBUSH_SETUP → PLAYING 移行時のコマ初期配置

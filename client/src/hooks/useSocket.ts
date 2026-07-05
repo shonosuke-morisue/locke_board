@@ -46,6 +46,7 @@ interface ClientToServerEvents {
   'card:destroy': (data: { row: number; col: number }) => void;
   'card:restore': (data: { row: number; col: number }) => void;
   'dice:roll': () => void;
+  'game:reshuffle': () => void;
   'game:restart': () => void;
   'game:end': () => void;
   'game:startBase': () => void;
@@ -73,6 +74,7 @@ interface UseSocketReturn {
   destroyCard: (row: number, col: number) => void;
   restoreCard: (row: number, col: number) => void;
   rollDice: () => void;
+  reshuffleCards: () => void;
   restartGame: () => void;
   endGame: () => void;
   startBase: () => void;
@@ -217,6 +219,11 @@ export function useSocket(): UseSocketReturn {
     socketRef.current?.emit('dice:roll');
   }, []);
 
+  // 伏せカードのリシャッフル（ホストのみ）
+  const reshuffleCards = useCallback(() => {
+    socketRef.current?.emit('game:reshuffle');
+  }, []);
+
   // ゲームリスタート（ホストのみ）
   const restartGame = useCallback(() => {
     socketRef.current?.emit('game:restart');
@@ -278,6 +285,7 @@ export function useSocket(): UseSocketReturn {
     destroyCard,
     restoreCard,
     rollDice,
+    reshuffleCards,
     restartGame,
     endGame,
     startBase,

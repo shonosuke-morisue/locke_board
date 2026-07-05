@@ -18,6 +18,7 @@ interface BoardProps {
   onDestroyCard: (row: number, col: number) => void;
   onRestoreCard: (row: number, col: number) => void;
   onRollDice: () => void;
+  onReshuffle: () => void;
   onRestart: () => void;
   onEnd: () => void;
   onStartBase: () => void;
@@ -39,6 +40,7 @@ export const Board: React.FC<BoardProps> = ({
   onDestroyCard,
   onRestoreCard,
   onRollDice,
+  onReshuffle,
   onRestart,
   onEnd,
   onStartBase,
@@ -231,6 +233,16 @@ export const Board: React.FC<BoardProps> = ({
                 style={styles.startBaseButton}
               >
                 秘密基地編へ
+              </button>
+              <button
+                onClick={() => {
+                  if (window.confirm('伏せているカードの中身を再配置します。よろしいですか？')) {
+                    onReshuffle();
+                  }
+                }}
+                style={styles.reshuffleButton}
+              >
+                リシャッフル
               </button>
               <button onClick={onRestart} style={styles.restartButton}>
                 リスタート
@@ -607,6 +619,15 @@ const styles: { [key: string]: React.CSSProperties } = {
     padding: '8px 16px',
     borderRadius: '6px',
     border: '1px solid #c8960a',
+    fontWeight: 'bold',
+  },
+  reshuffleButton: {
+    backgroundColor: '#0d3a4a',
+    color: '#5ac8e8',
+    fontSize: '13px',
+    padding: '8px 16px',
+    borderRadius: '6px',
+    border: '1px solid #2a7a9a',
     fontWeight: 'bold',
   },
   restartButton: {

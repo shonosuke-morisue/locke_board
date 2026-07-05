@@ -271,10 +271,10 @@ export function setupSocketHandlers(
       // PLAYINGフェーズに移行
       state.phase = 'PLAYING';
 
-      // goodプレイヤーのみ宇宙港（列0）に配置（evilは配置しない）
+      // goodプレイヤーのみ除外ゾーンに配置（evilは配置しない）。開始位置は各自がドラッグで決める
       const goodPlayers = state.players.filter((p) => p.isApproved && p.faction === 'good');
-      goodPlayers.forEach((player, index) => {
-        player.position = { row: index % 6, col: 0 };
+      goodPlayers.forEach((player) => {
+        player.position = { row: -1, col: -1 };
       });
 
       console.log('フェーズ移行: AMBUSH_SETUP → PLAYING');

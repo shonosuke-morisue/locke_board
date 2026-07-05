@@ -116,6 +116,41 @@ export function setupSocketHandlers(
       broadcastGameState(io, state);
     });
 
+    // ホスト権限の委譲（ホストのみ・LOBBYフェーズ）
+    socket.on('host:transfer', ({ playerId }) => {
+      const host = state.players.find((p) => p.socketId === socket.id);
+      if (!host?.isHost) {
+        socket.emit('error', { message: 'ホストのみがホスト権限を委譲できます。' });
+        return;
+      }
+
+      if (state.phase !== 'LOBBY') {
+        socket.emit('error', { message: 'ホストの委譲はロビーでのみ可能です。' });
+        return;
+      }
+
+      const target = state.players.find((p) => p.id === playerId);
+      if (!target) {
+        socket.emit('error', { message: '指定されたプレイヤーが見つかりません。' });
+        return;
+      }
+
+      // 自分自身への委譲は何もしない
+      if (target.id === host.id) return;
+
+      if (!target.isConnected) {
+        socket.emit('error', { message: '切断中のプレイヤーには委譲できません。' });
+        return;
+      }
+
+      // ホスト権を付け替える（新ホストは自動承認）
+      state.players.forEach((p) => { p.isHost = false; });
+      target.isHost = true;
+      target.isApproved = true;
+      console.log(`ホスト委譲: ${host.name} → ${target.name}`);
+      broadcastGameState(io, state);
+    });
+
     // 陣営割り当て（ホストのみ、FACTION_SETUPフェーズ）
     socket.on('faction:assign', ({ playerId, faction }) => {
       const host = state.players.find((p) => p.socketId === socket.id);

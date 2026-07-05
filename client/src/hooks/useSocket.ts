@@ -37,6 +37,7 @@ interface ClientToServerEvents {
   'player:join': (data: { name: string; playerId: string }) => void;
   'player:leave': () => void;
   'player:approve': (data: { playerId: string }) => void;
+  'host:transfer': (data: { playerId: string }) => void;
   'faction:assign': (data: { playerId: string; faction: Faction }) => void;
   'faction:done': () => void;
   'ambush:set': (data: { positions: Array<{ row: number; col: number }> }) => void;
@@ -65,6 +66,7 @@ interface UseSocketReturn {
   joinGame: (name: string) => void;
   leaveGame: () => void;
   approvePlayer: (playerId: string) => void;
+  transferHost: (playerId: string) => void;
   assignFaction: (playerId: string, faction: Faction) => void;
   factionDone: () => void;
   setAmbush: (positions: Array<{ row: number; col: number }>) => void;
@@ -174,6 +176,11 @@ export function useSocket(): UseSocketReturn {
     socketRef.current?.emit('player:approve', { playerId });
   }, []);
 
+  // ホスト権限の委譲（ホストのみ）
+  const transferHost = useCallback((playerId: string) => {
+    socketRef.current?.emit('host:transfer', { playerId });
+  }, []);
+
   // 陣営割り当て（ホストのみ）
   const assignFaction = useCallback((playerId: string, faction: Faction) => {
     socketRef.current?.emit('faction:assign', { playerId, faction });
@@ -276,6 +283,7 @@ export function useSocket(): UseSocketReturn {
     joinGame,
     leaveGame,
     approvePlayer,
+    transferHost,
     assignFaction,
     factionDone,
     setAmbush,

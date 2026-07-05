@@ -76,6 +76,7 @@ export interface ClientToServerEvents {
   'player:join': (data: { name: string; playerId: string }) => void;
   'player:leave': () => void;
   'player:approve': (data: { playerId: string }) => void;
+  'host:transfer': (data: { playerId: string }) => void;
   'faction:assign': (data: { playerId: string; faction: Faction }) => void;
   'faction:done': () => void;
   'ambush:set': (data: { positions: Array<{ row: number; col: number }> }) => void;

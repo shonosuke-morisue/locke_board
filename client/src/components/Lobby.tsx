@@ -23,6 +23,7 @@ interface LobbyProps {
   onJoin: (name: string) => void;
   onLeave: () => void;
   onApprove: (playerId: string) => void;
+  onTransferHost: (playerId: string) => void;
   onStartFactionSetup: () => void;
 }
 
@@ -31,6 +32,7 @@ export const Lobby: React.FC<LobbyProps> = ({
   onJoin,
   onLeave,
   onApprove,
+  onTransferHost,
   onStartFactionSetup,
 }) => {
   // 保存済みの名前を初期値としてセット
@@ -158,8 +160,27 @@ export const Lobby: React.FC<LobbyProps> = ({
           <p style={styles.emptyText}>まだ参加者がいません</p>
         ) : (
           <div style={styles.playerList}>
-            {approvedPlayers.map((player: Player) => (
-              <div key={player.id} style={styles.playerRow}>
+            {approvedPlayers.map((player: Player) => {
+              // ホストは他のプレイヤーの行をクリック（タップ）してホスト権限を委譲できる
+              const canTransfer = isHost && player.id !== gameState.myId;
+              return (
+              <div
+                key={player.id}
+                style={{
+                  ...styles.playerRow,
+                  ...(canTransfer ? styles.transferableRow : {}),
+                }}
+                onClick={
+                  canTransfer
+                    ? () => {
+                        if (window.confirm(`${player.name} にホスト権限を委譲しますか？`)) {
+                          onTransferHost(player.id);
+                        }
+                      }
+                    : undefined
+                }
+                title={canTransfer ? 'クリックでホスト権限を委譲' : undefined}
+              >
                 <span
                   style={{
                     ...styles.colorDot,
@@ -174,8 +195,14 @@ export const Lobby: React.FC<LobbyProps> = ({
                   <span style={styles.meBadge}>あなた</span>
                 )}
               </div>
-            ))}
+              );
+            })}
           </div>
+        )}
+        {isHost && approvedPlayers.length >= 2 && (
+          <p style={styles.transferHint}>
+            ※ プレイヤー名をクリック（タップ）するとホスト権限を委譲できます
+          </p>
         )}
       </div>
 
@@ -309,6 +336,15 @@ const styles: { [key: string]: React.CSSProperties } = {
     padding: '12px',
     backgroundColor: '#1a1a2e',
     borderRadius: '6px',
+  },
+  transferableRow: {
+    cursor: 'pointer',
+    border: '1px solid #3a3a5a',
+  },
+  transferHint: {
+    color: '#666',
+    fontSize: '12px',
+    marginTop: '8px',
   },
   pendingPlayerRow: {
     display: 'flex',

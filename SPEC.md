@@ -228,6 +228,7 @@ LOBBY → FACTION_SETUP → AMBUSH_SETUP → PLAYING → BASE_SETUP → BASE_PLA
 - **参加キャンセル**: LOBBY フェーズ中のみ `player:leave` で退出できる（他フェーズでは不可）
 - **ホスト移譲（退出時）**: 「承認済み＆接続中」→「接続中」→「リスト先頭」の優先順位で移譲する
 - **ホスト移譲（切断時）**: 接続中の次のプレイヤーへ自動移譲する（プレイヤーはリストに残る）
+- **ホスト委譲（手動）**: ホストは参加プレイヤー一覧の他プレイヤーの行をクリック（タップ）し、確認ダイアログを経て `host:transfer` でホスト権限を委譲できる（LOBBY のみ。委譲先は接続中であること。新ホストは自動承認される）
 
 **制約**
 - 名前は空文字列不可
@@ -319,6 +320,7 @@ LOBBY → FACTION_SETUP → AMBUSH_SETUP → PLAYING → BASE_SETUP → BASE_PLA
 | `player:join` | `{ name: string; playerId: string }` | 参加・再接続 | 全員 |
 | `player:leave` | なし | LOBBY 中に退出 | 全員（LOBBYのみ） |
 | `player:approve` | `{ playerId: string }` | プレイヤーを承認 | ホストのみ |
+| `host:transfer` | `{ playerId: string }` | ホスト権限を指定プレイヤーに委譲（LOBBY のみ・委譲先は接続中・新ホストは自動承認） | ホストのみ |
 | `faction:assign` | `{ playerId: string; faction: Faction }` | 陣営を割り当て | ホストのみ |
 | `faction:done` | なし | 陣営割り当て完了（LOBBYなら開始、FACTION_SETUPなら次フェーズ） | ホストのみ |
 | `ambush:set` | `{ positions: Array<{ row: number; col: number }> }` | 待ち伏せ位置を設定（0〜2箇所） | evil のみ |
@@ -426,6 +428,7 @@ FACTION_SETUP → AMBUSH_SETUP 移行時に呼び出す。
 |---|---|
 | `player:join` | 名前の空文字・上限10人・フェーズチェック（LOBBY のみ新規参加可） |
 | `player:leave` | LOBBY フェーズのみ |
+| `host:transfer` | ホスト限定・LOBBY のみ・委譲先が存在し接続中であること（自分自身への委譲は無視） |
 | `faction:done`（LOBBY→FACTION_SETUP） | 承認済み2人以上 |
 | `faction:done`（FACTION_SETUP→AMBUSH_SETUP） | 全承認済みへの割り当て済み・evil 1人以上。移行時に `dealAmbushCards` を実行 |
 | `ambush:set` / `ambush:done` | evil 限定・AMBUSH_SETUP・0〜2箇所/重複チェック・確定は2箇所必須 |
@@ -494,7 +497,7 @@ FACTION_SETUP → AMBUSH_SETUP 移行時に呼び出す。
 
 | コンポーネント | 役割 |
 |---|---|
-| Lobby.tsx | 参加申請・承認・フェーズ移行（承認済み2人以上で有効） |
+| Lobby.tsx | 参加申請・承認・フェーズ移行（承認済み2人以上で有効）。ホストは他プレイヤーの行クリックでホスト権限を委譲できる |
 | FactionSetup.tsx | ホストが陣営割り当て。全員割当＆evil1人以上で完了ボタン有効。割り当てられた陣営は全プレイヤーに表示（公開情報） |
 | AmbushSetup.tsx | evil が待ち伏せ2箇所を設定。配布能力カードのポップアップ表示。good は待機画面 |
 | Board.tsx | 惑星編6×7ボード。コマ移動・フリップ・右側詳細パネル・破壊メニュー・プレイヤー一覧（自分の名前クリックで配布カード再表示／good は獲得カード一覧表示） |

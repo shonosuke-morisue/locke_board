@@ -18,6 +18,7 @@ const App: React.FC = () => {
     joinGame,
     leaveGame,
     approvePlayer,
+    transferHost,
     assignFaction,
     factionDone,
     setAmbush,
@@ -80,6 +81,7 @@ const App: React.FC = () => {
               onJoin={joinGame}
               onLeave={leaveGame}
               onApprove={approvePlayer}
+              onTransferHost={transferHost}
               onStartFactionSetup={factionDone}
             />
           )}

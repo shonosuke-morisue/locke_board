@@ -3,7 +3,7 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { GameState } from '../types/game';
-import { BaseCard } from './BaseCard';
+import { BaseCard, renderMultilineName } from './BaseCard';
 import { PlayerPiece } from './PlayerPiece';
 import { useTouchDrag } from '../hooks/useTouchDrag';
 import { DealtCardModal } from './DealtCardModal';
@@ -379,9 +379,11 @@ export const BaseBoard: React.FC<BaseBoardProps> = ({
                 ...(detailCard.isKeyPoint ? styles.detailTitleKeyPoint : {}),
                 ...(detailCard.isDestroyed ? styles.detailTitleDestroyed : {}),
               }}>
-                {detailCard.isDestroyed
-                  ? `${detailCard.isKeyPoint && detailCard.keyPointLabel ? detailCard.keyPointLabel : detailCard.name} 破壊`
-                  : (detailCard.isKeyPoint && detailCard.keyPointLabel ? detailCard.keyPointLabel : detailCard.name)}
+                {renderMultilineName(
+                  detailCard.isDestroyed
+                    ? `${detailCard.isKeyPoint && detailCard.keyPointLabel ? detailCard.keyPointLabel : detailCard.name} 破壊`
+                    : (detailCard.isKeyPoint && detailCard.keyPointLabel ? detailCard.keyPointLabel : detailCard.name)
+                )}
               </div>
               <div style={styles.detailBody}>
                 {detailCard.isDestroyed ? (

@@ -12,6 +12,15 @@ interface BaseCardProps {
   onContextMenu: (x: number, y: number) => void; // 右クリック / 2本指タッチ
 }
 
+// '<br>' 区切りの表示名を改行して描画する（重要拠点の表示名用）
+export const renderMultilineName = (text: string): React.ReactNode =>
+  text.split('<br>').map((part, index, parts) => (
+    <React.Fragment key={index}>
+      {part}
+      {index < parts.length - 1 && <br />}
+    </React.Fragment>
+  ));
+
 export const BaseCard: React.FC<BaseCardProps> = ({
   card,
   onDoubleClick,
@@ -57,8 +66,10 @@ export const BaseCard: React.FC<BaseCardProps> = ({
     );
   }
 
-  // 表面（通常・重要拠点・破壊状態で色を変える）
-  const faceStyle = card.isDestroyed
+  // 表面（通常・重要拠点・破壊状態・破壊された重要拠点で色を変える）
+  const faceStyle = card.isDestroyed && card.isKeyPoint
+    ? { ...styles.cardFront, ...styles.destroyedKeyPointFront }
+    : card.isDestroyed
     ? { ...styles.cardFront, ...styles.destroyedFront }
     : card.isKeyPoint
     ? { ...styles.cardFront, ...styles.keyPointFront }
@@ -79,8 +90,9 @@ export const BaseCard: React.FC<BaseCardProps> = ({
           ...styles.cardTitle,
           ...(card.isKeyPoint ? styles.keyPointTitle : {}),
           ...(card.isDestroyed ? styles.destroyedTitle : {}),
+          ...(card.isDestroyed && card.isKeyPoint ? styles.destroyedKeyPointTitle : {}),
         }}>
-          {card.isDestroyed ? `${displayName} 破壊` : displayName}
+          {renderMultilineName(card.isDestroyed ? `${displayName} 破壊` : displayName)}
         </span>
       </div>
     </div>
@@ -142,6 +154,12 @@ const styles: { [key: string]: React.CSSProperties } = {
     backgroundColor: '#3a0a0a',
     border: '2px solid #8b1a1a',
   },
+  // 破壊された重要拠点: 破壊の赤地に重要拠点の金枠を組み合わせて差別化する
+  destroyedKeyPointFront: {
+    backgroundColor: '#3a0a0a',
+    border: '2px solid #c8960a',
+    boxShadow: 'inset 0 0 6px rgba(200, 150, 10, 0.4)',
+  },
   cardContent: {
     padding: '4px',
     textAlign: 'center',
@@ -161,5 +179,8 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   destroyedTitle: {
     color: '#ff6060',
+  },
+  destroyedKeyPointTitle: {
+    color: '#ffb04a',
   },
 };

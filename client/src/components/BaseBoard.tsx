@@ -297,6 +297,45 @@ export const BaseBoard: React.FC<BaseBoardProps> = ({
         />
       )}
 
+      {/* 除外ゾーン（ボードの上に配置） */}
+      <div
+        data-eliminated="true"
+        style={{
+          ...styles.eliminatedZone,
+          ...(dragOverEliminated ? styles.dragOverCell : {}),
+        }}
+        onDragOver={(e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+          setDragOverEliminated(true);
+        }}
+        onDragLeave={() => setDragOverEliminated(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          const playerId = e.dataTransfer.getData('playerId') || draggingPlayerId;
+          if (playerId) {
+            onMovePiece(playerId, -1, -1);
+          }
+          setDraggingPlayerId(null);
+          setDragOverEliminated(false);
+        }}
+      >
+        <span style={styles.eliminatedLabel}>除外ゾーン</span>
+        <div style={styles.eliminatedPieces}>
+          {eliminatedPlayers.map((player) => (
+            <PlayerPiece
+              key={player.id}
+              player={player}
+              isMyPiece={player.id === gameState.myId}
+              onDragStart={handleDragStart}
+              onTouchDragStart={handleTouchDragStart}
+              isTouchDragging={player.id === touchDraggingPlayerId}
+              touchPaddingX={6}
+            />
+          ))}
+        </div>
+      </div>
+
       {/* ボードエリア（グリッド + 詳細パネル） */}
       <div style={styles.boardArea}>
 
@@ -425,44 +464,6 @@ export const BaseBoard: React.FC<BaseBoardProps> = ({
         </div>
         </div>{/* 右サイド 終了 */}
 
-      </div>
-
-      {/* 除外ゾーン */}
-      <div
-        data-eliminated="true"
-        style={{
-          ...styles.eliminatedZone,
-          ...(dragOverEliminated ? styles.dragOverCell : {}),
-        }}
-        onDragOver={(e) => {
-          e.preventDefault();
-          e.dataTransfer.dropEffect = 'move';
-          setDragOverEliminated(true);
-        }}
-        onDragLeave={() => setDragOverEliminated(false)}
-        onDrop={(e) => {
-          e.preventDefault();
-          const playerId = e.dataTransfer.getData('playerId') || draggingPlayerId;
-          if (playerId) {
-            onMovePiece(playerId, -1, -1);
-          }
-          setDraggingPlayerId(null);
-          setDragOverEliminated(false);
-        }}
-      >
-        <span style={styles.eliminatedLabel}>除外ゾーン</span>
-        <div style={styles.eliminatedPieces}>
-          {eliminatedPlayers.map((player) => (
-            <PlayerPiece
-              key={player.id}
-              player={player}
-              isMyPiece={player.id === gameState.myId}
-              onDragStart={handleDragStart}
-              onTouchDragStart={handleTouchDragStart}
-              isTouchDragging={player.id === touchDraggingPlayerId}
-            />
-          ))}
-        </div>
       </div>
 
       {/* 操作説明 */}
@@ -803,7 +804,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   eliminatedPieces: {
     display: 'flex',
     flexWrap: 'wrap',
-    gap: '4px',
+    gap: '10px', // タッチで個々のコマを狙いやすいよう間隔を広げる（横に余裕がある除外ゾーン向け）
   },
   instructions: {
     textAlign: 'center',
